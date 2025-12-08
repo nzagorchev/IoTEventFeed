@@ -1,0 +1,107 @@
+#########################
+# macOS
+#########################
+
+# General macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnail caches
+._*
+.Spotlight-V100
+.Trashes
+
+# macOS metadata
+*.swp
+*.swo
+*.tmp
+
+# macOS resource forks
+*.AppleDouble
+*.LSOverride
+
+
+#########################
+# Xcode
+#########################
+
+# User-specific project files
+xcuserdata/
+*.xcuserdatad
+
+# Workspace settings
+xcshareddata/WorkspaceSettings.xcsettings
+
+# Build products
+build/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Index
+.ideworkspace
+*.xcscmblueprint
+
+# Package Manager artifacts
+/.build/
+
+
+#########################
+# Swift Package Manager
+#########################
+.build/
+Packages/
+Package.pins
+Package.resolved
+.swiftpm/
+
+
+#########################
+# CocoaPods
+#########################
+Pods/
+Podfile.lock
+*.xcworkspace
+
+
+#########################
+# Fastlane
+#########################
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+
+#########################
+# Archives & Logs
+#########################
+*.xcarchive
+*.log
+*.gz
+*.zip
+
+
+#########################
+# Temporary files
+#########################
+*.orig
+*.rej
+*.backup
+*.bak
+
+
+#########################
+# SwiftLint / Tools
+#########################
+.swiftlint.cache
+.swiftlint.tmp
+
+
+#########################
+# Environment variables
+#########################
+.env
+.env.*
