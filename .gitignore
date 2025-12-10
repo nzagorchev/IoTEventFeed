@@ -105,3 +105,35 @@ fastlane/test_output/
 #########################
 .env
 .env.*
+
+#########################
+# Binaries
+#########################
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+#########################
+# Go
+#########################
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
