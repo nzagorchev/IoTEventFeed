@@ -221,16 +221,21 @@ curl -H "Authorization: Bearer <token>" \
 
 ## Generating Sample Log Files
 
-Use the provided script to generate sample log files for testing:
+Log files are **optional** - the API works perfectly fine without them.
+Generate log files in order the events to have `download_url` fields populated.
+The mock store will assign the `download_url` field to some of the events based on files generated.
+
+To generate sample log files for testing, use the provided script:
 
 ```bash
 cd backend
 ./scripts/generate_file.sh [size_in_mb]
 
 # Examples:
-./scripts/generate_file.sh 2    # Generate 2MB file (default)
+./scripts/generate_file.sh 2    # Generate 2MB file
 ./scripts/generate_file.sh 5    # Generate 5MB file
-./scripts/generate_file.sh 10   # Generate 10MB file
+./scripts/generate_file.sh 10   # Generate 10MB file (maximum recommended size)
 ```
 
-Generated files are placed in the `files/` directory and can be referenced by events via the `download_url` field.
+**Note:** File generation can take time, especially for larger files. Generated files are placed in the `files/` directory and can be referenced by events via the `download_url` field. 
+The API gracefully handles missing files by returning a 404 response.

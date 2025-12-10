@@ -4,9 +4,14 @@
 # This creates a text file that simulates system logs
 # Usage: ./generate_file.sh [SIZE_MB]
 # Example: ./generate_file.sh 5  (generates 5MB file)
+# Maximum recommended size: 10MB
 
-# Get file size parameter (default: 2MB)
+# Get file size parameter (default: 2MB, max: 10MB)
 SIZE_MB=${1:-2}
+if [ "$SIZE_MB" -gt 10 ]; then
+    echo "Warning: File size exceeds 10MB maximum. Clamping to 10MB."
+    SIZE_MB=10
+fi
 
 # Generate current timestamp for filename
 if [[ "$OSTYPE" == "darwin"* ]]; then

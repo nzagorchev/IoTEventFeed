@@ -268,13 +268,16 @@ func NewMockStore() *MockStore {
 
 		severity := severities[idx]
 		var downloadURL *string
-		if i%7 == 0 {
-			severity = "error" // Occasional system errors
-			// Add download URL for system errors (cycle through available files)
-			downloadURL = getLogFileURL(availableLogFiles, (i/7)%len(availableLogFiles))
-		} else if eventTypes[idx] == "tailgating_detection" && i%3 == 0 {
-			// Add download URL for some tailgating events
-			downloadURL = getLogFileURL(availableLogFiles, (i/3)%len(availableLogFiles))
+		// Only assign download URLs if log files are available
+		if len(availableLogFiles) > 0 {
+			if i%7 == 0 {
+				severity = "error" // Occasional system errors
+				// Add download URL for system errors (cycle through available files)
+				downloadURL = getLogFileURL(availableLogFiles, (i/7)%len(availableLogFiles))
+			} else if eventTypes[idx] == "tailgating_detection" && i%3 == 0 {
+				// Add download URL for some tailgating events
+				downloadURL = getLogFileURL(availableLogFiles, (i/3)%len(availableLogFiles))
+			}
 		}
 
 		store.events = append(store.events, models.Event{

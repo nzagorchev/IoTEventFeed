@@ -137,3 +137,6 @@ go.work
 *.swp
 *.swo
 *~
+
+# Generated files (backend log files)
+backend/files
