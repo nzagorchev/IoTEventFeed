@@ -311,27 +311,49 @@ func (s *MockStore) GetUserByID(id string) (*models.User, bool) {
 	return nil, false
 }
 
-// GetEvents retrieves events with pagination and optional timestamp filtering
+// GetEvents retrieves events with cursor-based pagination
 // Events are always sorted by timestamp in descending order (newest first)
-// If afterID is provided, excludes that specific event and only returns events after it
-func (s *MockStore) GetEvents(page, pageSize int, after *time.Time, afterID *string) ([]models.Event, int, bool) {
+//
+// Parameters:
+//   - limit: Maximum number of events to return (for latest events, no cursor)
+//   - beforeTS: Get events newer than this timestamp (for refresh)
+//   - beforeID: Event ID for precise filtering with beforeTS
+//   - afterTS: Get events older than this timestamp (for backward pagination)
+//   - afterID: Event ID for precise filtering with afterTS
+//
+// Returns: (events, hasNext)
+func (s *MockStore) GetEvents(limit *int, beforeTS *time.Time, beforeID *string, afterTS *time.Time, afterID *string) ([]models.Event, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// Filter events by timestamp (if after is provided)
-	// Use >= comparison to include events with the same timestamp
+	// Start with all events
 	filteredEvents := s.events
-	if after != nil {
-		filteredEvents = make([]models.Event, 0)
-		for _, event := range s.events {
-			if event.Timestamp.After(*after) || event.Timestamp.Equal(*after) {
-				filteredEvents = append(filteredEvents, event)
+
+	// Filter by beforeTS (for refresh - get newer events)
+	// Events with timestamp > beforeTS (newer than beforeTS)
+	if beforeTS != nil {
+		temp := make([]models.Event, 0)
+		for _, event := range filteredEvents {
+			if event.Timestamp.After(*beforeTS) {
+				temp = append(temp, event)
 			}
 		}
+		filteredEvents = temp
+	}
+
+	// Filter by afterTS (for backward pagination - get older events)
+	// Events with timestamp < afterTS (older than afterTS)
+	if afterTS != nil {
+		temp := make([]models.Event, 0)
+		for _, event := range filteredEvents {
+			if event.Timestamp.Before(*afterTS) {
+				temp = append(temp, event)
+			}
+		}
+		filteredEvents = temp
 	}
 
 	// Sort events by timestamp descending, then by ID descending for deterministic ordering
-	// This ensures consistent ordering even when multiple events have the same timestamp
 	sortedEvents := make([]models.Event, len(filteredEvents))
 	copy(sortedEvents, filteredEvents)
 	sort.Slice(sortedEvents, func(i, j int) bool {
@@ -342,10 +364,28 @@ func (s *MockStore) GetEvents(page, pageSize int, after *time.Time, afterID *str
 		return sortedEvents[i].Timestamp.After(sortedEvents[j].Timestamp)
 	})
 
-	// If after_id is provided, filter to only events that come after that event
-	// This provides precise cursor-based pagination without duplicates
-	if afterID != nil {
-		// Find the position of the event with after_id in the sorted list
+	// Apply ID-based filtering for precise cursor positioning
+	if beforeID != nil && beforeTS != nil {
+		// Find the position of the event with beforeID in the sorted list
+		foundIndex := -1
+		for i, event := range sortedEvents {
+			if event.ID == *beforeID {
+				foundIndex = i
+				break
+			}
+		}
+
+		if foundIndex >= 0 {
+			// Return only events that come after the found event (exclude the event itself)
+			sortedEvents = sortedEvents[foundIndex+1:]
+		} else {
+			// If beforeID not found, return empty
+			sortedEvents = []models.Event{}
+		}
+	}
+
+	if afterID != nil && afterTS != nil {
+		// Find the position of the event with afterID in the sorted list
 		foundIndex := -1
 		for i, event := range sortedEvents {
 			if event.ID == *afterID {
@@ -356,35 +396,39 @@ func (s *MockStore) GetEvents(page, pageSize int, after *time.Time, afterID *str
 
 		if foundIndex >= 0 {
 			// Return only events that come after the found event (exclude the event itself)
+			// Since events are sorted descending (newest first), older events come AFTER in the list
+			// So we take events after the cursor event index
 			sortedEvents = sortedEvents[foundIndex+1:]
 		} else {
-			// If after_id not found, return empty (event doesn't exist or wasn't in filtered set)
+			// If afterID not found, return empty
 			sortedEvents = []models.Event{}
 		}
 	}
 
+	// Determine page size
+	pageSize := 20 // Fixed size for cursor-based pagination
+	if limit != nil && beforeTS == nil && afterTS == nil {
+		// Use limit only for latest events (no cursor)
+		pageSize = *limit
+		if pageSize > 100 {
+			pageSize = 100 // Max limit
+		}
+	}
+
+	// Apply pagination
 	total := len(sortedEvents)
 	if total == 0 {
-		return []models.Event{}, 0, false
+		return []models.Event{}, false
 	}
 
-	// Calculate pagination indices
-	start := (page - 1) * pageSize
-	end := start + pageSize
-
-	if start >= total {
-		return []models.Event{}, total, false
+	if pageSize > total {
+		pageSize = total
 	}
 
-	if end > total {
-		end = total
-	}
+	events := sortedEvents[:pageSize]
+	hasNext := pageSize < total
 
-	// Return paginated results (already sorted newest first)
-	events := sortedEvents[start:end]
-	hasMore := end < total
-
-	return events, total, hasMore
+	return events, hasNext
 }
 
 func (s *MockStore) GetEventByID(id string) (*models.Event, bool) {

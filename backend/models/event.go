@@ -48,10 +48,13 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 
 // EventListResponse represents a paginated list of events
 type EventListResponse struct {
-	Events   []Event `json:"events"`
-	Total    int     `json:"total"`
-	Page     int     `json:"page"`
-	PageSize int     `json:"page_size"`
-	HasMore  bool    `json:"has_more"`
-	NextPage *int    `json:"next_page,omitempty"`
+	Events    []Event `json:"events"`
+	HasNext   bool    `json:"has_next"`              // Whether there are more events available
+	NextCursor *Cursor `json:"next_cursor,omitempty"` // Cursor for fetching next page (older events)
+}
+
+// Cursor represents a pagination cursor (timestamp + event ID)
+type Cursor struct {
+	Timestamp int64  `json:"timestamp"` // Unix milliseconds
+	EventID   string `json:"event_id"`   // UUID
 }
