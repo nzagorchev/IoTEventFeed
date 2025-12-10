@@ -14,6 +14,7 @@ import (
 func main() {
 	// Parse command line flags
 	port := flag.String("port", "8080", "Port to run the server on")
+	filesDir := flag.String("files-dir", "./files", "Directory to store downloadable files")
 	flag.Parse()
 
 	// Initialize store with mock data
@@ -23,9 +24,10 @@ func main() {
 	authHandler := handlers.NewAuthHandler(mockStore)
 	userHandler := handlers.NewUserHandler(mockStore)
 	eventHandler := handlers.NewEventHandler(mockStore)
+	fileHandler := handlers.NewFileHandler(*filesDir)
 
 	// Setup routes
-	router := routes.SetupRoutes(authHandler, userHandler, eventHandler)
+	router := routes.SetupRoutes(authHandler, userHandler, eventHandler, fileHandler)
 
 	// Disable Trusted Proxies - change in production if this should be handled on gin level
 	router.SetTrustedProxies(nil)

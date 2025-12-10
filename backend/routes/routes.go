@@ -12,6 +12,7 @@ func SetupRoutes(
 	authHandler *handlers.AuthHandler,
 	userHandler *handlers.UserHandler,
 	eventHandler *handlers.EventHandler,
+	fileHandler *handlers.FileHandler,
 ) *gin.Engine {
 	router := gin.Default()
 
@@ -51,6 +52,9 @@ func SetupRoutes(
 		// Event routes
 		protected.GET("/events", eventHandler.GetEvents)
 		protected.GET("/events/:id", eventHandler.GetEventByID)
+
+		// File download routes
+		protected.GET("/files/:filename", fileHandler.DownloadFile)
 	}
 
 	return router
