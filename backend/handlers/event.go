@@ -44,6 +44,7 @@ func (h *EventHandler) GetEvents(c *gin.Context) {
 	}
 
 	// Parse after timestamp parameter (Unix milliseconds)
+	// after_id can only be used when after is provided
 	var after *time.Time
 	var afterID *string
 
@@ -61,9 +62,19 @@ func (h *EventHandler) GetEvents(c *gin.Context) {
 			return
 		}
 
-		// Parse optional after_id parameter for more precise filtering
+		// Parse optional after_id parameter (only valid when after is provided)
 		if afterIDStr := c.Query("after_id"); afterIDStr != "" {
 			afterID = &afterIDStr
+		}
+	} else {
+		// If after_id is provided without after, return error
+		if afterIDStr := c.Query("after_id"); afterIDStr != "" {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Error:   "Invalid parameter combination",
+				Message: "The 'after_id' parameter requires the 'after' parameter to be provided",
+				Code:    http.StatusBadRequest,
+			})
+			return
 		}
 	}
 

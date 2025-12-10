@@ -302,55 +302,22 @@ func (s *MockStore) GetEvents(page, pageSize int, after *time.Time, afterID *str
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// Filter events by timestamp if after is provided
+	// Filter events by timestamp (if after is provided)
 	// Use >= comparison to include events with the same timestamp
 	filteredEvents := s.events
 	if after != nil {
 		filteredEvents = make([]models.Event, 0)
 		for _, event := range s.events {
-			if afterID != nil && event.ID == *afterID {
-				continue
-			}
-
-			if afterID != nil {
-				if event.Timestamp.After(*after) {
-					filteredEvents = append(filteredEvents, event)
-				}
-			} else {
-				if event.Timestamp.After(*after) || event.Timestamp.Equal(*after) {
-					filteredEvents = append(filteredEvents, event)
-				}
-			}
-		}
-	} else if afterID != nil {
-		var foundEvent *models.Event
-		for _, event := range s.events {
-			if event.ID == *afterID {
-				foundEvent = &event
-				break
-			}
-		}
-		if foundEvent != nil {
-			filteredEvents = make([]models.Event, 0)
-			for _, event := range s.events {
-				if event.ID == *afterID {
-					continue
-				}
-				if event.Timestamp.After(foundEvent.Timestamp) ||
-					(event.Timestamp.Equal(foundEvent.Timestamp) && event.ID > foundEvent.ID) {
-					filteredEvents = append(filteredEvents, event)
-				}
+			if event.Timestamp.After(*after) || event.Timestamp.Equal(*after) {
+				filteredEvents = append(filteredEvents, event)
 			}
 		}
 	}
 
-	// Sort events by timestamp in descending order (newest first)
-	// Create a copy to avoid modifying the original slice
+	// Sort events by timestamp descending, then by ID descending for deterministic ordering
+	// This ensures consistent ordering even when multiple events have the same timestamp
 	sortedEvents := make([]models.Event, len(filteredEvents))
 	copy(sortedEvents, filteredEvents)
-
-	// Sort by timestamp descending, then by ID descending for deterministic ordering
-	// This ensures consistent ordering even when multiple events have the same timestamp
 	sort.Slice(sortedEvents, func(i, j int) bool {
 		if sortedEvents[i].Timestamp.Equal(sortedEvents[j].Timestamp) {
 			// Deterministic tie-breaker: sort by ID descending
@@ -358,6 +325,27 @@ func (s *MockStore) GetEvents(page, pageSize int, after *time.Time, afterID *str
 		}
 		return sortedEvents[i].Timestamp.After(sortedEvents[j].Timestamp)
 	})
+
+	// If after_id is provided, filter to only events that come after that event
+	// This provides precise cursor-based pagination without duplicates
+	if afterID != nil {
+		// Find the position of the event with after_id in the sorted list
+		foundIndex := -1
+		for i, event := range sortedEvents {
+			if event.ID == *afterID {
+				foundIndex = i
+				break
+			}
+		}
+
+		if foundIndex >= 0 {
+			// Return only events that come after the found event (exclude the event itself)
+			sortedEvents = sortedEvents[foundIndex+1:]
+		} else {
+			// If after_id not found, return empty (event doesn't exist or wasn't in filtered set)
+			sortedEvents = []models.Event{}
+		}
+	}
 
 	total := len(sortedEvents)
 	if total == 0 {
