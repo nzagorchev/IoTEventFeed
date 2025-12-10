@@ -5,7 +5,9 @@ import (
 	"ioteventfeed/backend/auth"
 	"ioteventfeed/backend/models"
 	"log"
+	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,6 +26,9 @@ func NewMockStore() *MockStore {
 		users:  make(map[string]*models.User),
 		events: make([]models.Event, 0),
 	}
+
+	// Get list of available log files from files directory
+	availableLogFiles := getAvailableLogFiles("./files")
 
 	// Initialize hardcoded users with hashed passwords
 	// Default passwords:
@@ -95,14 +100,15 @@ func NewMockStore() *MockStore {
 			Location:   "Server Room, Floor 3",
 		},
 		{
-			ID:         uuid.New().String(),
-			DeviceID:   "DEVICE-001",
-			DeviceName: "Device - Main Entrance",
-			Type:       "tailgating_detection",
-			Severity:   "critical",
-			Message:    "Tailgating detected - Unauthorized person followed authorized user",
-			Timestamp:  now.Add(-18 * time.Minute),
-			Location:   "Main Entrance, Building A",
+			ID:          uuid.New().String(),
+			DeviceID:    "DEVICE-001",
+			DeviceName:  "Device - Main Entrance",
+			Type:        "tailgating_detection",
+			Severity:    "critical",
+			Message:     "Tailgating detected - Unauthorized person followed authorized user",
+			Timestamp:   now.Add(-18 * time.Minute),
+			Location:    "Main Entrance, Building A",
+			DownloadURL: getLogFileURL(availableLogFiles, 1),
 		},
 		{
 			ID:         uuid.New().String(),
@@ -135,14 +141,15 @@ func NewMockStore() *MockStore {
 			Location:   "Parking Garage, Level 2",
 		},
 		{
-			ID:         uuid.New().String(),
-			DeviceID:   "DEVICE-001",
-			DeviceName: "Device - Main Entrance",
-			Type:       "tailgating_detection",
-			Severity:   "critical",
-			Message:    "Tailgating detected - Multiple unauthorized individuals",
-			Timestamp:  now.Add(-1 * time.Hour),
-			Location:   "Main Entrance, Building A",
+			ID:          uuid.New().String(),
+			DeviceID:    "DEVICE-001",
+			DeviceName:  "Device - Main Entrance",
+			Type:        "tailgating_detection",
+			Severity:    "critical",
+			Message:     "Tailgating detected - Multiple unauthorized individuals",
+			Timestamp:   now.Add(-1 * time.Hour),
+			Location:    "Main Entrance, Building A",
+			DownloadURL: getLogFileURL(availableLogFiles, 2),
 		},
 		{
 			ID:         uuid.New().String(),
@@ -175,14 +182,15 @@ func NewMockStore() *MockStore {
 			Location:   "Data Center, Basement",
 		},
 		{
-			ID:         uuid.New().String(),
-			DeviceID:   "DEVICE-002",
-			DeviceName: "Device - Server Room Access",
-			Type:       "system",
-			Severity:   "error",
-			Message:    "System error - Camera calibration required",
-			Timestamp:  now.Add(-2*time.Hour + 20*time.Minute),
-			Location:   "Server Room, Floor 3",
+			ID:          uuid.New().String(),
+			DeviceID:    "DEVICE-002",
+			DeviceName:  "Device - Server Room Access",
+			Type:        "system",
+			Severity:    "error",
+			Message:     "System error - Camera calibration required",
+			Timestamp:   now.Add(-2*time.Hour + 20*time.Minute),
+			Location:    "Server Room, Floor 3",
+			DownloadURL: getLogFileURL(availableLogFiles, 0),
 		},
 		{
 			ID:         uuid.New().String(),
@@ -195,14 +203,15 @@ func NewMockStore() *MockStore {
 			Location:   "Main Entrance, Building A",
 		},
 		{
-			ID:         uuid.New().String(),
-			DeviceID:   "DEVICE-004",
-			DeviceName: "Device - Parking Garage",
-			Type:       "tailgating_detection",
-			Severity:   "critical",
-			Message:    "Tailgating detected - Vehicle tailgating through gate",
-			Timestamp:  now.Add(-3*time.Hour + 30*time.Minute),
-			Location:   "Parking Garage, Level 2",
+			ID:          uuid.New().String(),
+			DeviceID:    "DEVICE-004",
+			DeviceName:  "Device - Parking Garage",
+			Type:        "tailgating_detection",
+			Severity:    "critical",
+			Message:     "Tailgating detected - Vehicle tailgating through gate",
+			Timestamp:   now.Add(-3*time.Hour + 30*time.Minute),
+			Location:    "Parking Garage, Level 2",
+			DownloadURL: getLogFileURL(availableLogFiles, 3),
 		},
 		{
 			ID:         uuid.New().String(),
@@ -258,19 +267,26 @@ func NewMockStore() *MockStore {
 		minutesOffset := (i % 60) // Add minute-level variation
 
 		severity := severities[idx]
+		var downloadURL *string
 		if i%7 == 0 {
 			severity = "error" // Occasional system errors
+			// Add download URL for system errors (cycle through available files)
+			downloadURL = getLogFileURL(availableLogFiles, (i/7)%len(availableLogFiles))
+		} else if eventTypes[idx] == "tailgating_detection" && i%3 == 0 {
+			// Add download URL for some tailgating events
+			downloadURL = getLogFileURL(availableLogFiles, (i/3)%len(availableLogFiles))
 		}
 
 		store.events = append(store.events, models.Event{
-			ID:         uuid.New().String(),
-			DeviceID:   deviceIDs[idx],
-			DeviceName: deviceNames[idx],
-			Type:       eventTypes[idx],
-			Severity:   severity,
-			Message:    fmt.Sprintf("%s - Event #%d", messages[idx], i),
-			Timestamp:  now.Add(-time.Duration(hoursAgo)*time.Hour - time.Duration(minutesOffset)*time.Minute),
-			Location:   locations[idx],
+			ID:          uuid.New().String(),
+			DeviceID:    deviceIDs[idx],
+			DeviceName:  deviceNames[idx],
+			Type:        eventTypes[idx],
+			Severity:    severity,
+			Message:     fmt.Sprintf("%s - Event #%d", messages[idx], i),
+			Timestamp:   now.Add(-time.Duration(hoursAgo)*time.Hour - time.Duration(minutesOffset)*time.Minute),
+			Location:    locations[idx],
+			DownloadURL: downloadURL,
 		})
 	}
 
@@ -380,4 +396,39 @@ func (s *MockStore) GetEventByID(id string) (*models.Event, bool) {
 		}
 	}
 	return nil, false
+}
+
+func getAvailableLogFiles(filesDir string) []string {
+	files := []string{}
+
+	if _, err := os.Stat(filesDir); os.IsNotExist(err) {
+		return files
+	}
+
+	entries, err := os.ReadDir(filesDir)
+	if err != nil {
+		return files
+	}
+
+	// Filter for system_log_*.txt files
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasPrefix(entry.Name(), "system_log_") && strings.HasSuffix(entry.Name(), ".txt") {
+			files = append(files, entry.Name())
+		}
+	}
+
+	return files
+}
+
+// getLogFileURL returns a download URL for a log file, or nil if no files available
+func getLogFileURL(availableFiles []string, index int) *string {
+	if len(availableFiles) == 0 {
+		return nil
+	}
+
+	// Cycle through available files
+	fileIndex := index % len(availableFiles)
+	filename := availableFiles[fileIndex]
+	url := fmt.Sprintf("/api/files/%s", filename)
+	return &url
 }
