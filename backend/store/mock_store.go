@@ -380,10 +380,18 @@ func (s *MockStore) GetEvents(limit *int, beforeTS *time.Time, beforeID *string,
 
 		if foundIndex >= 0 {
 			// Return only events that come after the found event (exclude the event itself)
-			sortedEvents = sortedEvents[foundIndex+1:]
+			// Newer events come BEFORE the found event
+			sortedEvents = sortedEvents[:foundIndex+1]
 		} else {
-			// If beforeID not found, return empty
-			sortedEvents = []models.Event{}
+			// If beforeID not found, fall back to strict timestamp comparison
+			// Filter out events with timestamp equal to beforeTS (keep only strictly newer)
+			temp := make([]models.Event, 0)
+			for _, event := range sortedEvents {
+				if event.Timestamp.After(*beforeTS) {
+					temp = append(temp, event)
+				}
+			}
+			sortedEvents = temp
 		}
 	}
 
@@ -403,8 +411,14 @@ func (s *MockStore) GetEvents(limit *int, beforeTS *time.Time, beforeID *string,
 			// So we take events after the cursor event index
 			sortedEvents = sortedEvents[foundIndex+1:]
 		} else {
-			// If afterID not found, return empty
-			sortedEvents = []models.Event{}
+			// If afterID not found, fall back to strict timestamp comparison
+			temp := make([]models.Event, 0)
+			for _, event := range sortedEvents {
+				if event.Timestamp.Before(*afterTS) {
+					temp = append(temp, event)
+				}
+			}
+			sortedEvents = temp
 		}
 	}
 
