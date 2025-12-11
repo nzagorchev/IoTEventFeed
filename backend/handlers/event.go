@@ -172,3 +172,53 @@ func (h *EventHandler) GetEventByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, event)
 }
+
+// GetNewEventsCount retrieves the count of new events newer than the given timestamp
+// Query parameters:
+//   - after_ts: Timestamp to count events newer than this - Unix milliseconds (required)
+//
+// Returns total count and count of critical events
+func (h *EventHandler) GetNewEventsCount(c *gin.Context) {
+	afterTSStr := c.Query("after_ts")
+	if afterTSStr == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "Missing parameter",
+			Message: "The 'after_ts' parameter is required",
+			Code:    http.StatusBadRequest,
+		})
+		return
+	}
+
+	timestampMs, err := strconv.ParseInt(afterTSStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "Invalid timestamp format",
+			Message: "The 'after_ts' parameter must be Unix milliseconds (e.g., 1705312200000)",
+			Code:    http.StatusBadRequest,
+		})
+		return
+	}
+
+	afterTS := time.UnixMilli(timestampMs)
+	totalCount, criticalCount := h.store.GetNewEventsCount(afterTS)
+
+	response := models.NewEventsCountResponse{
+		TotalCount:    totalCount,
+		CriticalCount: criticalCount,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// GenerateNewEvents creates 10 new events for testing purposes
+// These events will be newer than the newest event currently in the store
+func (h *EventHandler) GenerateNewEvents(c *gin.Context) {
+	newEvents := h.store.GenerateNewEvents()
+	
+	response := models.EventListResponse{
+		Events:  newEvents,
+		HasNext: false,
+	}
+	
+	c.JSON(http.StatusOK, response)
+}

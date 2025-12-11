@@ -86,7 +86,7 @@ func NewMockStore() *MockStore {
 			Type:       "facial_authentication",
 			Severity:   "info",
 			Message:    "Facial authentication successful",
-			Timestamp:  now.Add(-5 * time.Minute),
+			Timestamp:  now.Add(-5 * time.Minute).Truncate(time.Millisecond),
 			Location:   "Main Entrance, Building A",
 		},
 		{
@@ -96,7 +96,7 @@ func NewMockStore() *MockStore {
 			Type:       "facial_authentication",
 			Severity:   "warning",
 			Message:    "Facial authentication failed",
-			Timestamp:  now.Add(-12 * time.Minute),
+			Timestamp:  now.Add(-12 * time.Minute).Truncate(time.Millisecond),
 			Location:   "Server Room, Floor 3",
 		},
 		{
@@ -106,7 +106,7 @@ func NewMockStore() *MockStore {
 			Type:        "tailgating_detection",
 			Severity:    "critical",
 			Message:     "Tailgating detected - Unauthorized person followed authorized user",
-			Timestamp:   now.Add(-18 * time.Minute),
+			Timestamp:   now.Add(-18 * time.Minute).Truncate(time.Millisecond),
 			Location:    "Main Entrance, Building A",
 			DownloadURL: getLogFileURL(availableLogFiles, 1),
 		},
@@ -117,7 +117,7 @@ func NewMockStore() *MockStore {
 			Type:       "facial_authentication",
 			Severity:   "info",
 			Message:    "Facial authentication successful",
-			Timestamp:  now.Add(-25 * time.Minute),
+			Timestamp:  now.Add(-25 * time.Minute).Truncate(time.Millisecond),
 			Location:   "Executive Floor, Building B",
 		},
 		{
@@ -127,7 +127,7 @@ func NewMockStore() *MockStore {
 			Type:       "access_denied",
 			Severity:   "warning",
 			Message:    "Access denied - Authentication failure after 3 attempts",
-			Timestamp:  now.Add(-32 * time.Minute),
+			Timestamp:  now.Add(-32 * time.Minute).Truncate(time.Millisecond),
 			Location:   "Server Room, Floor 3",
 		},
 		{
@@ -137,7 +137,7 @@ func NewMockStore() *MockStore {
 			Type:       "facial_authentication",
 			Severity:   "info",
 			Message:    "Facial authentication successful",
-			Timestamp:  now.Add(-45 * time.Minute),
+			Timestamp:  now.Add(-45 * time.Minute).Truncate(time.Millisecond),
 			Location:   "Parking Garage, Level 2",
 		},
 		{
@@ -147,7 +147,7 @@ func NewMockStore() *MockStore {
 			Type:        "tailgating_detection",
 			Severity:    "critical",
 			Message:     "Tailgating detected - Multiple unauthorized individuals",
-			Timestamp:   now.Add(-1 * time.Hour),
+			Timestamp:   now.Add(-1 * time.Hour).Truncate(time.Millisecond),
 			Location:    "Main Entrance, Building A",
 			DownloadURL: getLogFileURL(availableLogFiles, 2),
 		},
@@ -158,7 +158,7 @@ func NewMockStore() *MockStore {
 			Type:       "facial_authentication",
 			Severity:   "info",
 			Message:    "Facial authentication successful",
-			Timestamp:  now.Add(-1*time.Hour + 15*time.Minute),
+			Timestamp:  now.Add(-1*time.Hour + 15*time.Minute).Truncate(time.Millisecond),
 			Location:   "Research Lab, Building C",
 		},
 		{
@@ -168,7 +168,7 @@ func NewMockStore() *MockStore {
 			Type:       "access_denied",
 			Severity:   "error",
 			Message:    "Access denied - Face mask detected, authentication required",
-			Timestamp:  now.Add(-1*time.Hour + 30*time.Minute),
+			Timestamp:  now.Add(-1*time.Hour + 30*time.Minute).Truncate(time.Millisecond),
 			Location:   "Executive Floor, Building B",
 		},
 		{
@@ -178,7 +178,7 @@ func NewMockStore() *MockStore {
 			Type:       "facial_authentication",
 			Severity:   "info",
 			Message:    "Facial authentication successful",
-			Timestamp:  now.Add(-2 * time.Hour),
+			Timestamp:  now.Add(-2 * time.Hour).Truncate(time.Millisecond),
 			Location:   "Data Center, Basement",
 		},
 		{
@@ -188,7 +188,7 @@ func NewMockStore() *MockStore {
 			Type:        "system",
 			Severity:    "error",
 			Message:     "System error - Camera calibration required",
-			Timestamp:   now.Add(-2*time.Hour + 20*time.Minute),
+			Timestamp:   now.Add(-2*time.Hour + 20*time.Minute).Truncate(time.Millisecond),
 			Location:    "Server Room, Floor 3",
 			DownloadURL: getLogFileURL(availableLogFiles, 0),
 		},
@@ -199,7 +199,7 @@ func NewMockStore() *MockStore {
 			Type:       "facial_authentication",
 			Severity:   "info",
 			Message:    "Facial authentication successful",
-			Timestamp:  now.Add(-3 * time.Hour),
+			Timestamp:  now.Add(-3 * time.Hour).Truncate(time.Millisecond),
 			Location:   "Main Entrance, Building A",
 		},
 		{
@@ -209,7 +209,7 @@ func NewMockStore() *MockStore {
 			Type:        "tailgating_detection",
 			Severity:    "critical",
 			Message:     "Tailgating detected - Vehicle tailgating through gate",
-			Timestamp:   now.Add(-3*time.Hour + 30*time.Minute),
+			Timestamp:   now.Add(-3*time.Hour + 30*time.Minute).Truncate(time.Millisecond),
 			Location:    "Parking Garage, Level 2",
 			DownloadURL: getLogFileURL(availableLogFiles, 3),
 		},
@@ -220,7 +220,7 @@ func NewMockStore() *MockStore {
 			Type:       "facial_authentication",
 			Severity:   "warning",
 			Message:    "Facial authentication failed - Low confidence match",
-			Timestamp:  now.Add(-4 * time.Hour),
+			Timestamp:  now.Add(-4 * time.Hour).Truncate(time.Millisecond),
 			Location:   "Warehouse Entrance, Building D",
 		},
 		{
@@ -230,7 +230,7 @@ func NewMockStore() *MockStore {
 			Type:       "facial_authentication",
 			Severity:   "info",
 			Message:    "Facial authentication successful",
-			Timestamp:  now.Add(-4*time.Hour + 45*time.Minute),
+			Timestamp:  now.Add(-4*time.Hour + 45*time.Minute).Truncate(time.Millisecond),
 			Location:   "Research Lab, Building C",
 		},
 	}
@@ -287,7 +287,7 @@ func NewMockStore() *MockStore {
 			Type:        eventTypes[idx],
 			Severity:    severity,
 			Message:     fmt.Sprintf("%s - Event #%d", messages[idx], i),
-			Timestamp:   now.Add(-time.Duration(hoursAgo)*time.Hour - time.Duration(minutesOffset)*time.Minute),
+			Timestamp:   now.Add(-time.Duration(hoursAgo)*time.Hour - time.Duration(minutesOffset)*time.Minute).Truncate(time.Millisecond),
 			Location:    locations[idx],
 			DownloadURL: downloadURL,
 		})
@@ -333,11 +333,11 @@ func (s *MockStore) GetEvents(limit *int, beforeTS *time.Time, beforeID *string,
 	filteredEvents := s.events
 
 	// Filter by beforeTS (for refresh - get newer events)
-	// Events with timestamp > beforeTS (newer than beforeTS)
+	// Events with timestamp >= beforeTS (newer than beforeTS)
 	if beforeTS != nil {
 		temp := make([]models.Event, 0)
 		for _, event := range filteredEvents {
-			if event.Timestamp.After(*beforeTS) {
+			if event.Timestamp.After(*beforeTS) || event.Timestamp.Equal(*beforeTS) {
 				temp = append(temp, event)
 			}
 		}
@@ -345,11 +345,11 @@ func (s *MockStore) GetEvents(limit *int, beforeTS *time.Time, beforeID *string,
 	}
 
 	// Filter by afterTS (for backward pagination - get older events)
-	// Events with timestamp < afterTS (older than afterTS)
+	// Events with timestamp <= afterTS (older than afterTS)
 	if afterTS != nil {
 		temp := make([]models.Event, 0)
 		for _, event := range filteredEvents {
-			if event.Timestamp.Before(*afterTS) {
+			if event.Timestamp.Before(*afterTS) || event.Timestamp.Equal(*afterTS) {
 				temp = append(temp, event)
 			}
 		}
@@ -443,6 +443,120 @@ func (s *MockStore) GetEventByID(id string) (*models.Event, bool) {
 		}
 	}
 	return nil, false
+}
+
+// GetNewEventsCount counts events newer than the given timestamp
+// Returns total count and count of critical events
+func (s *MockStore) GetNewEventsCount(afterTS time.Time) (int, int) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	totalCount := 0
+	criticalCount := 0
+
+	for _, event := range s.events {
+		if event.Timestamp.After(afterTS) {
+			totalCount++
+			if event.Severity == "critical" {
+				criticalCount++
+			}
+		}
+	}
+
+	return totalCount, criticalCount
+}
+
+// GenerateNewEvents creates 10 new events that are newer than the newest event in the store
+func (s *MockStore) GenerateNewEvents() []models.Event {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Find the newest event timestamp
+	var newestTimestamp time.Time
+	if len(s.events) > 0 {
+		newestTimestamp = s.events[0].Timestamp
+		for _, event := range s.events {
+			if event.Timestamp.After(newestTimestamp) {
+				newestTimestamp = event.Timestamp
+			}
+		}
+	} else {
+		// If no events exist, use current time
+		newestTimestamp = time.Now()
+	}
+
+	// Get available log files
+	availableLogFiles := getAvailableLogFiles("./files")
+
+	// Generate 10 new events, each newer than the previous
+	locations := []string{"Main Entrance, Building A", "Server Room, Floor 3", "Executive Floor, Building B",
+		"Parking Garage, Level 2", "Research Lab, Building C", "Data Center, Basement",
+		"Warehouse Entrance, Building D", "Conference Room, Floor 5", "IT Office, Floor 2", "Lobby, Building A"}
+	deviceIDs := []string{"DEVICE-001", "DEVICE-002", "DEVICE-003", "DEVICE-004", "DEVICE-005",
+		"DEVICE-006", "DEVICE-007", "DEVICE-008", "DEVICE-009", "DEVICE-010"}
+	deviceNames := []string{"Device - Main Entrance", "Device - Server Room Access", "Device - Executive Floor",
+		"Device - Parking Garage", "Device - Research Lab", "Device - Data Center",
+		"Device - Warehouse Entrance", "Device - Conference Room", "Device - IT Office", "Device - Lobby"}
+	eventTypes := []string{"facial_authentication", "tailgating_detection", "access_denied", "facial_authentication",
+		"facial_authentication", "tailgating_detection", "access_denied", "facial_authentication",
+		"facial_authentication", "tailgating_detection"}
+	severities := []string{"info", "critical", "warning", "info", "info", "critical", "warning", "info", "info", "critical"}
+	messages := []string{
+		"Facial authentication successful",
+		"Tailgating detected - Unauthorized access attempt",
+		"Access denied - Authentication failure",
+		"Facial authentication successful",
+		"Facial authentication successful",
+		"Tailgating detected - Multiple individuals",
+		"Access denied - Invalid credentials",
+		"Facial authentication successful",
+		"Facial authentication successful",
+		"Tailgating detected - Security breach",
+	}
+
+	now := time.Now()
+	newEvents := make([]models.Event, 0, 10)
+
+	for i := 0; i < 10; i++ {
+		idx := i % 10
+		// Create events that are newer than the newest event
+		// Start from 1 second after newest, then add seconds for each new event
+		eventTime := newestTimestamp.Add(time.Duration(i+1) * time.Second)
+		// Ensure it's not in the past
+		if eventTime.Before(now) {
+			eventTime = now.Add(time.Duration(i+1) * time.Second)
+		}
+
+		severity := severities[idx]
+		var downloadURL *string
+		// Only assign download URLs if log files are available
+		if len(availableLogFiles) > 0 {
+			if i%3 == 0 && eventTypes[idx] == "tailgating_detection" {
+				// Add download URL for some tailgating events
+				downloadURL = getLogFileURL(availableLogFiles, i%len(availableLogFiles))
+			} else if i%5 == 0 {
+				severity = "error" // Occasional system errors
+				downloadURL = getLogFileURL(availableLogFiles, i%len(availableLogFiles))
+			}
+		}
+
+		newEvent := models.Event{
+			ID:          uuid.New().String(),
+			DeviceID:    deviceIDs[idx],
+			DeviceName:  deviceNames[idx],
+			Type:        eventTypes[idx],
+			Severity:    severity,
+			Message:     fmt.Sprintf("%s - Generated Event #%d", messages[idx], len(s.events)+i+1),
+			Timestamp:   eventTime.Truncate(time.Millisecond),
+			Location:    locations[idx],
+			DownloadURL: downloadURL,
+		}
+
+		newEvents = append(newEvents, newEvent)
+		s.events = append(s.events, newEvent)
+	}
+
+	return newEvents
 }
 
 func getAvailableLogFiles(filesDir string) []string {

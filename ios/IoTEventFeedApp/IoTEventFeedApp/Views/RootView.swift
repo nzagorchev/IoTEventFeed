@@ -17,13 +17,13 @@ struct RootView: View {
         Group {
             switch session.state {
             case .loggedIn:
-                Text("Authenticated - Main App Coming Soon")
-                    .foregroundColor(.secondary)
+                EventFeedView()
             case .loggedOut:
                 LoginView()
             }
         }
         .environment(session)
+        .environment(\.networkClient, networkClient)
         .onAppear {
             session.setModelContext(modelContext)
         }

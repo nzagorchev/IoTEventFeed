@@ -52,6 +52,8 @@ func SetupRoutes(
 		// Event routes
 		protected.GET("/events", eventHandler.GetEvents)
 		protected.GET("/events/:id", eventHandler.GetEventByID)
+		protected.GET("/events/new/count", eventHandler.GetNewEventsCount)
+		protected.POST("/events/generate", eventHandler.GenerateNewEvents)
 
 		// File download routes
 		protected.GET("/files/:filename", fileHandler.DownloadFile)
