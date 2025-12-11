@@ -51,8 +51,11 @@ final class FileDownloadService {
         if let downloads = try? context.fetch(descriptor), !downloads.isEmpty {
             // Check if file still exists on disk
             let download = downloads[0]
-            return FileManager.default.fileExists(atPath: getFilePath(for: download.localFilename))
+            let exists = FileManager.default.fileExists(atPath: getFilePath(for: download.localFilename))
+            AppLogger.debug("Checking file download status - event_id: \(eventID), filename: \(download.filename), exists: \(exists)", category: AppLogger.files)
+            return exists
         }
+        AppLogger.debug("Checking file download status - event_id: \(eventID), not_downloaded", category: AppLogger.files)
         return false
     }
     
@@ -117,19 +120,25 @@ final class FileDownloadService {
     ) async throws {
         let fileID = generateFileID(eventID: eventID, downloadURL: downloadURL)
 
+        AppLogger.info("File download requested - event_id: \(eventID), url: \(downloadURL)", category: AppLogger.files)
+
         // Check if file is already downloaded
         let isDownloaded = await MainActor.run {
             isFileDownloaded(for: eventID, downloadURL: downloadURL)
         }
         
         if isDownloaded {
+            AppLogger.info("File download skipped - already downloaded - event_id: \(eventID)", category: AppLogger.files)
             return
         }
 
         // If download already in progress, wait for it
         if let existingTask = ongoingTasks[fileID] {
+            AppLogger.info("File download already in progress - waiting - event_id: \(eventID)", category: AppLogger.files)
             return try await existingTask.value
         }
+
+        AppLogger.info("Starting file download - event_id: \(eventID)", category: AppLogger.files)
 
         let newTask = Task {
             try await self.performDownload(
@@ -147,6 +156,8 @@ final class FileDownloadService {
         }
 
         try await newTask.value
+        
+        AppLogger.info("File download completed successfully - event_id: \(eventID)", category: AppLogger.files)
     }
     
     private func performDownload(
@@ -156,6 +167,7 @@ final class FileDownloadService {
         eventTimestamp: Date
     ) async throws {
         guard let url = networkClient.fullURL(for: downloadURL) else {
+            AppLogger.error("File download failed: invalid URL - event_id: \(eventID), url: \(downloadURL)", category: AppLogger.files)
             throw FileDownloadError.invalidURL
         }
         
@@ -167,6 +179,8 @@ final class FileDownloadService {
             .appendingPathComponent("Downloads", isDirectory: true)
             .appendingPathComponent(localFilename)
             .path
+        
+        AppLogger.info("File download starting - event_id: \(eventID), filename: \(filename), local_path: \(localFilename)", category: AppLogger.files)
         
         await MainActor.run {
             downloadProgress[fileID] = 0.0
@@ -185,12 +199,18 @@ final class FileDownloadService {
             
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
+                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+                AppLogger.error("File download failed: HTTP error - event_id: \(eventID), status_code: \(statusCode)", category: AppLogger.files)
                 throw FileDownloadError.downloadFailed
             }
             
             // Get content length for progress tracking
             let contentLength = httpResponse.value(forHTTPHeaderField: "Content-Length")
                 .flatMap { Int64($0) }
+            
+            if let size = contentLength {
+                AppLogger.debug("File download progress - event_id: \(eventID), total_size: \(size) bytes", category: AppLogger.files)
+            }
             
             // Calculate optimal buffer size
             let writeBufferSize = calculateOptimalBufferSize(contentLength: contentLength)
@@ -243,6 +263,8 @@ final class FileDownloadService {
             // Get file size
             let fileSize = try? FileManager.default.attributesOfItem(atPath: localFilePath)[.size] as? Int64
             
+            AppLogger.info("File download finished - event_id: \(eventID), filename: \(filename), size: \(fileSize ?? 0) bytes", category: AppLogger.files)
+            
             // Save metadata on main actor to avoid threading issues
             await MainActor.run {
                 let context = ModelContext(modelContainer)
@@ -265,6 +287,7 @@ final class FileDownloadService {
             }
             
         } catch {
+            AppLogger.error("File download error - event_id: \(eventID), error: \(error.localizedDescription)", category: AppLogger.files)
             // Clean up on error
             await MainActor.run {
                 downloadProgress[fileID] = nil

@@ -8,7 +8,6 @@
 import Foundation
 import SwiftUI
 import SwiftData
-import os.log
 
 @MainActor
 @Observable
@@ -48,12 +47,15 @@ final class EventFeedViewModel {
     func startPolling() {
         stopPolling()
         
+        let intervalSeconds = Double(Self.pollingInterval) / 1_000_000_000.0
+        AppLogger.info("Starting polling for new events - interval: \(String(format: "%.1f", intervalSeconds)) seconds", category: AppLogger.events)
+        
         pollingTask = Task {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: Self.pollingInterval)
                 
                 guard !Task.isCancelled else { break }
-                os_log("checking for new events...")
+                AppLogger.debug("Polling: checking for new events...", category: AppLogger.events)
                 await checkForNewEvents()
             }
         }
@@ -61,13 +63,19 @@ final class EventFeedViewModel {
     
     // Cancel polling
     func stopPolling() {
-        pollingTask?.cancel()
-        pollingTask = nil
+        if pollingTask != nil {
+            AppLogger.info("Stopping polling for new events", category: AppLogger.events)
+            pollingTask?.cancel()
+            pollingTask = nil
+        }
     }
     
     private func checkForNewEvents() async {
         guard networkMonitor.isConnected,
               let firstTimestamp = firstEventTimestamp else {
+            if !networkMonitor.isConnected {
+                AppLogger.debug("Polling skipped: offline", category: AppLogger.events)
+            }
             return
         }
         
@@ -80,8 +88,12 @@ final class EventFeedViewModel {
             // Update state
             newEventsCount = countResponse.totalCount
             newCriticalCount = countResponse.criticalCount
-            os_log("new events count: %d, critical count: %d", newEventsCount, newCriticalCount)
+            
+            if newEventsCount > 0 {
+                AppLogger.info("Polling: new events found - total: \(newEventsCount), critical: \(newCriticalCount)", category: AppLogger.events)
+            }
         } catch {
+            AppLogger.error("Polling: failed to check for new events - error: \(error.localizedDescription)", category: AppLogger.events)
             // Silent - do not show error for polling
         }
     }
@@ -91,9 +103,12 @@ final class EventFeedViewModel {
         
         // If offline, load from cache only
         guard networkMonitor.isConnected else {
+            AppLogger.info("Loading initial events from cache (offline)", category: AppLogger.events)
             loadFromCache()
             return
         }
+        
+        AppLogger.info("Loading initial events - limit: \(Self.pageSize)", category: AppLogger.events)
         
         isLoading = true
         errorMessage = nil
@@ -118,7 +133,7 @@ final class EventFeedViewModel {
             hasMore = response.hasNext
             nextCursor = response.nextCursor
             
-            os_log("events updated")
+            AppLogger.info("Initial events loaded successfully - count: \(newEvents.count), has_more: \(hasMore)", category: AppLogger.events)
             
             // Update first event timestamp for polling
             if let firstEvent = newEvents.first {
@@ -128,6 +143,7 @@ final class EventFeedViewModel {
             // Start polling after initial load
             startPolling()
         } catch {
+            AppLogger.error("Failed to load initial events - error: \(error.localizedDescription)", category: AppLogger.events)
             errorMessage = error.localizedDescription
             
             // Try to load from cache if network fails
@@ -147,9 +163,12 @@ final class EventFeedViewModel {
         
         // If offline, try to load from cache
         guard networkMonitor.isConnected else {
+            AppLogger.info("Loading more events from cache (offline)", category: AppLogger.events)
             loadMoreFromCache(afterTimestamp: Date(timeIntervalSince1970: TimeInterval(cursor.timestamp) / 1000.0), afterID: cursor.eventID)
             return
         }
+        
+        AppLogger.info("Loading more events - after_timestamp: \(cursor.timestamp), after_id: \(cursor.eventID)", category: AppLogger.events)
         
         isLoadingMore = true
         
@@ -171,7 +190,10 @@ final class EventFeedViewModel {
             events.append(contentsOf: newEvents)
             hasMore = response.hasNext
             nextCursor = response.nextCursor
+            
+            AppLogger.info("More events loaded successfully - count: \(newEvents.count), has_more: \(hasMore)", category: AppLogger.events)
         } catch {
+            AppLogger.error("Failed to load more events - error: \(error.localizedDescription)", category: AppLogger.events)
             // On error, try to load more from cache
             loadMoreFromCache(afterTimestamp: Date(timeIntervalSince1970: TimeInterval(cursor.timestamp) / 1000.0), afterID: cursor.eventID)
         }
@@ -185,6 +207,8 @@ final class EventFeedViewModel {
               let firstEvent = events.first else {
             return
         }
+        
+        AppLogger.info("Refreshing new events - before_timestamp: \(firstTimestamp), before_id: \(firstEvent.id)", category: AppLogger.events)
         
         isLoading = true
         errorMessage = nil
@@ -206,6 +230,7 @@ final class EventFeedViewModel {
             
             guard !newEvents.isEmpty else {
                 // No new events
+                AppLogger.info("Refresh: no new events found", category: AppLogger.events)
                 newEventsCount = 0
                 newCriticalCount = 0
                 isLoading = false
@@ -239,7 +264,7 @@ final class EventFeedViewModel {
                 }
             }
             
-            os_log("new events updated")
+            AppLogger.info("Refresh: new events updated - count: \(newEvents.count)", category: AppLogger.events)
             
             // Update first event timestamp
             if let firstNewEvent = newEvents.first {
@@ -250,6 +275,7 @@ final class EventFeedViewModel {
             newEventsCount = 0
             newCriticalCount = 0
         } catch {
+            AppLogger.error("Refresh failed - error: \(error.localizedDescription)", category: AppLogger.events)
             errorMessage = error.localizedDescription
         }
         

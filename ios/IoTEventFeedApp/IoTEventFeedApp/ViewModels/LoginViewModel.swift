@@ -31,6 +31,8 @@ final class LoginViewModel {
     func login() async {
         guard isFormValid else { return }
         
+        AppLogger.info("Login attempt started - username: \(username)", category: AppLogger.auth)
+        
         isLoading = true
         errorMessage = nil
         
@@ -40,7 +42,10 @@ final class LoginViewModel {
             // Update AppSession with login response
             let user = User(from: loginResponse.user)
             try appSession.setLoggedIn(token: loginResponse.token, user: user)
+            
+            AppLogger.info("Login successful - username: \(username), user_id: \(user.id)", category: AppLogger.auth)
         } catch {
+            AppLogger.error("Login failed - username: \(username), error: \(error.localizedDescription)", category: AppLogger.auth)
             errorMessage = error.localizedDescription
         }
         
