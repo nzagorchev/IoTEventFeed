@@ -43,8 +43,8 @@ struct FileDownloadView: View {
         .task {
             await checkDownloadStatus()
         }
-        .onChange(of: downloadService?.downloadProgress) { _, _ in
-            updateProgress()
+        .onChange(of: currentProgress){ old, new in
+            downloadProgress = new
         }
         .alert("Delete File", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
@@ -236,10 +236,12 @@ struct FileDownloadView: View {
         }
     }
     
-    private func updateProgress() {
-        guard let service = downloadService else { return }
-        let fileID = service.generateFileID(eventID: event.id, downloadURL: downloadURL)
-        downloadProgress = service.downloadProgress[fileID]
+    var currentProgress: Double {
+        if let downloadService = downloadService {
+            let fileID = downloadService.generateFileID(eventID: event.id, downloadURL: downloadURL)
+            return downloadService.downloadProgress[fileID] ?? 0
+        }
+        return 0
     }
     
     private func downloadFile() async {

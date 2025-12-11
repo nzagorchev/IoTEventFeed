@@ -12,6 +12,10 @@ import SwiftUICore
 
 @Observable
 final class FileDownloadService {
+    #if DEBUG
+    // Enable/Disable this to use throttling to check the file download progress
+    let USE_THROTTLING = true
+    #endif
     let modelContainer: ModelContainer
     private let networkClient: NetworkClient
     private let appSession: AppSession
@@ -226,10 +230,41 @@ final class FileDownloadService {
             buffer.reserveCapacity(writeBufferSize) // Pre-allocate buffer
             var lastProgressUpdate: Int64 = 0
             
+            #if DEBUG
+            // 🐌 Throttle speed (bytes per second)
+            let throttleSpeed: Int64 = 200_000 // 200 KB/s (adjust as needed)
+            let throttleChunkSize = 16384 // 16 KB chunks
+            var lastThrottleTime = Date()
+            var bytesInCurrentSecond: Int64 = 0
+            // ----
+            #endif
+            
             // Read bytes from async sequence and accumulate in buffer
             for try await byte in asyncBytes {
                 buffer.append(byte)
                 downloadedBytes += 1
+                
+                #if DEBUG
+                // 🐌 Throttle logic
+                if USE_THROTTLING {
+                    bytesInCurrentSecond += 1
+                    if bytesInCurrentSecond >= throttleChunkSize {
+                        let elapsed = Date().timeIntervalSince(lastThrottleTime)
+                        let expectedTime = Double(bytesInCurrentSecond) / Double(throttleSpeed)
+                        
+                        if elapsed < expectedTime {
+                            try await Task.sleep(nanoseconds: UInt64((expectedTime - elapsed) * 1_000_000_000))
+                        }
+                        
+                        // Reset for next chunk
+                        if elapsed >= 1.0 {
+                            lastThrottleTime = Date()
+                            bytesInCurrentSecond = 0
+                        }
+                    }
+                }
+                //----
+                #endif
                 
                 // Write buffer when it reaches optimal size
                 if buffer.count >= writeBufferSize {
