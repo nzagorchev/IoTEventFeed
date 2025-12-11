@@ -11,6 +11,7 @@ import SwiftData
 @main
 struct IoTEventFeedAppApp: App {
     let container: ModelContainer
+    @State private var networkMonitor = NetworkMonitor()
     
     init() {
         // Configure SwiftData schema
@@ -32,6 +33,7 @@ struct IoTEventFeedAppApp: App {
         WindowGroup {
             RootView()
                 .modelContainer(container)
+                .environment(networkMonitor)
         }
     }
 }

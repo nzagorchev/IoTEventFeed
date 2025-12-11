@@ -7,14 +7,8 @@
 
 import Foundation
 
-// API Error Response model
-struct APIErrorResponse: Codable {
-    let error: String
-    let message: String?
-    let code: Int
-}
+// MARK: - API Localized Error
 
-// API Localized Error
 enum APIError: LocalizedError {
     case unauthorized(String)
     
@@ -26,24 +20,7 @@ enum APIError: LocalizedError {
     }
 }
 
-// API Response Models
-struct APIUser: Codable {
-    let id: String
-    let username: String
-    let email: String
-    let name: String
-    let role: String
-}
-
-struct LoginRequest: Codable {
-    let username: String
-    let password: String
-}
-
-struct LoginResponse: Codable {
-    let token: String
-    let user: APIUser
-}
+// MARK: - API Service
 
 final class APIService {
     private let networkClient: NetworkClient
@@ -109,6 +86,18 @@ final class APIService {
     func getEvent(id: String, appSession: AppSession) async throws -> APIEvent {
         return try await networkClient.request(
             endpoint: "/api/events/\(id)",
+            appSession: appSession
+        )
+    }
+    
+    func getNewEventsCount(afterTimestamp: Int64, appSession: AppSession) async throws -> NewEventsCountResponse {
+        let queryItems = [
+            URLQueryItem(name: "after_ts", value: "\(afterTimestamp)")
+        ]
+        
+        return try await networkClient.request(
+            endpoint: "/api/events/new/count",
+            queryItems: queryItems,
             appSession: appSession
         )
     }

@@ -58,3 +58,9 @@ type Cursor struct {
 	Timestamp int64  `json:"timestamp"` // Unix milliseconds
 	EventID   string `json:"event_id"`   // UUID
 }
+
+// NewEventsCountResponse represents the count of new events
+type NewEventsCountResponse struct {
+	TotalCount    int `json:"total_count"`     // Total count of new events
+	CriticalCount int `json:"critical_count"`  // Count of critical events among new events
+}

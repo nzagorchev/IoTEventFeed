@@ -45,6 +45,13 @@ final class NetworkClient {
         self.session = session
     }
     
+    func fullURL(for path: String) -> URL? {
+        if path.hasPrefix("http://") || path.hasPrefix("https://") {
+            return URL(string: path)
+        }
+        return URL(string: "\(baseURL)\(path)")
+    }
+    
     func request<T: Decodable>(
         endpoint: String,
         method: String = "GET",
