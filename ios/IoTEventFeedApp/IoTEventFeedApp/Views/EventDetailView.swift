@@ -90,11 +90,6 @@ struct EventDetailView: View {
                     }
                 }
                 .padding(.vertical)
-                .refreshable {
-                    if networkMonitor.isConnected {
-                        await loadFullEvent()
-                    }
-                }
             }
             
             // Banners overlay
@@ -110,6 +105,24 @@ struct EventDetailView: View {
         }
         .navigationTitle("Event Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    Task {
+                        await loadFullEvent()
+                    }
+                }) {
+                    if isLoading {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .foregroundColor(.accentColor)
+                    }
+                }
+                .disabled(isLoading || !networkMonitor.isConnected)
+            }
+        }
         .task {
             await loadFullEvent()
         }
@@ -130,12 +143,12 @@ struct EventDetailView: View {
     }
     
     private func loadFullEvent() async {
-        guard fullEvent == nil else { return }
-        
         guard networkMonitor.isConnected else { return }
         
         isLoading = true
         errorMessage = nil
+        
+        AppLogger.info("Refresh event details for id: \(event.id)", category: AppLogger.events)
         
         do {
             let apiService = APIService(networkClient: networkClient)
