@@ -40,7 +40,6 @@ struct ProfileView: View {
                     // Downloaded Content Section
                     SectionView(title: "Downloaded Files") {
                         if downloads.isEmpty {
-                            HStack {
                                 VStack(spacing: 12) {
                                     Image(systemName: "tray")
                                         .font(.system(size: 48))
@@ -48,9 +47,9 @@ struct ProfileView: View {
                                     Text("No files downloaded")
                                         .font(.subheadline)
                                         .foregroundColor(.secondary)
+                                        .padding(.horizontal, 16)
                                 }
                                 .padding(.vertical, 24)
-                            }
                         } else {
                             ForEach(downloads) { download in
                                 DownloadedFileRow(

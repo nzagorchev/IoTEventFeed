@@ -15,7 +15,7 @@ struct EventRowView: View {
             HStack {
                 Circle()
                     .fill(getSeverityColor(severity: event.severity))
-                    .frame(width: 8, height: 8)
+                    .frame(width: 12, height: 12)
                 
                 Text(event.deviceName)
                     .font(.headline)
@@ -45,7 +45,7 @@ struct EventRowView: View {
         .padding()
         .background(Color(.systemBackground))
         .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .shadow(color: Color.primary.opacity(0.1), radius: 2, x: 0, y: 1)
     }
     
     private var formattedTimestamp: String {
@@ -53,4 +53,40 @@ struct EventRowView: View {
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: event.timestamp, relativeTo: Date())
     }
+}
+
+#Preview {
+    let event1 = Event(
+        id: "71cae9cc-2bb3-4648-bf28-8c2e08a3265a",
+        deviceID: "DEVICE-001",
+        deviceName: "Device - Main Entrance",
+        type: "facial_authentication",
+        severity: "info",
+        message: "Facial authentication successful",
+        timestamp: Date().addingTimeInterval(-30),
+        location: "Main Entrance, Building A",
+        downloadURL: nil
+    )
+    
+    let event2 = Event(
+        id: "842cc9b7-8e03-4ed6-b33d-caf6d2e5769d",
+        deviceID: "DEVICE-002",
+        deviceName: "Device - Server Room Access",
+        type: "access_denied",
+        severity: "warning",
+        message: "Access denied - Authentication failure after 3 attempts",
+        timestamp: Date().addingTimeInterval(-5*60),
+        location: "Server Room, Floor 3",
+        downloadURL: nil
+    )
+    
+    let events = [event1, event2]
+    
+    VStack(spacing: 12) {
+        ForEach(events) { event in
+            EventRowView(event: event)
+        }
+    }
+    .padding(.horizontal)
+    
 }

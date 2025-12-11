@@ -20,14 +20,16 @@ struct SectionView<Content: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.headline)
+                .fontWeight(.semibold)
                 .foregroundColor(.primary)
                 .padding(.horizontal)
             
             VStack(spacing: 0) {
                 content
             }
-            .background(Color(.secondarySystemBackground))
+            .background(Color(.systemBackground))
             .cornerRadius(12)
+            .shadow(color: Color.primary.opacity(0.2), radius: 2, x: 0, y: 1)
             .padding(.horizontal)
         }
     }
@@ -38,22 +40,31 @@ struct DetailRow: View {
     let value: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.caption)
+                .fontWeight(.medium)
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
+                .tracking(0.5)
             
             Text(value)
                 .font(.body)
                 .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         
         Divider()
-            .padding(.leading)
+            .padding(.leading, 16)
     }
 }
 
+#Preview {
+    SectionView(title: "Device Information") {
+        DetailRow(label: "Device Name", value: "DEVICE-001")
+        DetailRow(label: "Device ID", value: "842cc9b7-8e03-4ed6-b33d-caf6d2e5769d")
+    }
+}
