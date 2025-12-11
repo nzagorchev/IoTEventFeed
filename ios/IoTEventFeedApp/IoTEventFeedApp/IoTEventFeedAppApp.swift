@@ -17,7 +17,8 @@ struct IoTEventFeedAppApp: App {
         // Configure SwiftData schema
         let schema = Schema([
             User.self,
-            Event.self
+            Event.self,
+            FileDownload.self
         ])
         
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
@@ -31,7 +32,7 @@ struct IoTEventFeedAppApp: App {
     
     var body: some Scene {
         WindowGroup {
-            RootView()
+            RootView(modelContainer: container)
                 .modelContainer(container)
                 .environment(networkMonitor)
         }

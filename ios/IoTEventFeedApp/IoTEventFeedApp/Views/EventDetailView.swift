@@ -14,6 +14,7 @@ struct EventDetailView: View {
     @State private var fullEvent: Event?
     @State private var showErrorBanner = false
     @State private var showOfflineBanner = false
+    
     @Environment(AppSession.self) private var appSession
     @Environment(\.networkClient) private var networkClient
     @Environment(NetworkMonitor.self) private var networkMonitor
@@ -66,23 +67,17 @@ struct EventDetailView: View {
                         DetailRow(label: "Event ID", value: displayEvent.id)
                     }
                     
-                    // Download URL (if available)
-                    if let downloadURLString = displayEvent.downloadURL,
-                       let downloadURL = networkClient.fullURL(for: downloadURLString) {
+                    if let downloadURLString = displayEvent.downloadURL {
                         SectionView(title: "Attachments") {
-                            Link(destination: downloadURL) {
-                                HStack {
-                                    Image(systemName: "arrow.down.circle.fill")
-                                        .foregroundColor(.blue)
-                                    Text("Download Log File")
-                                        .foregroundColor(.blue)
-                                    Spacer()
-                                    Image(systemName: "arrow.up.right.square")
-                                        .foregroundColor(.blue)
-                                }
-                                .padding(.vertical, 4)
-                            }
+                            FileDownloadView(
+                                event: event,
+                                downloadURL: downloadURLString,
+                                showError: false,
+                                errorMessage: $errorMessage
+                            )
                         }
+                        .padding(.bottom, 20)
+                        Spacer()
                     }
                     
                     if isLoading {
@@ -95,6 +90,11 @@ struct EventDetailView: View {
                     }
                 }
                 .padding(.vertical)
+                .refreshable {
+                    if networkMonitor.isConnected {
+                        await loadFullEvent()
+                    }
+                }
             }
             
             // Banners overlay
@@ -129,26 +129,10 @@ struct EventDetailView: View {
         }
     }
     
-    private var formattedFullTimestamp: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .long
-        formatter.timeStyle = .medium
-        return formatter.string(from: displayEvent.timestamp)
-    }
-    
-    private var formattedRelativeTimestamp: String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        return formatter.localizedString(for: displayEvent.timestamp, relativeTo: Date())
-    }
-    
     private func loadFullEvent() async {
         guard fullEvent == nil else { return }
         
-        // Don't load if offline
-        guard networkMonitor.isConnected else {
-            return
-        }
+        guard networkMonitor.isConnected else { return }
         
         isLoading = true
         errorMessage = nil
@@ -163,55 +147,18 @@ struct EventDetailView: View {
         
         isLoading = false
     }
-}
-
-struct SectionView<Content: View>: View {
-    let title: String
-    let content: Content
     
-    init(title: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.content = content()
+    private var formattedFullTimestamp: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        formatter.timeStyle = .medium
+        return formatter.string(from: displayEvent.timestamp)
     }
     
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.headline)
-                .foregroundColor(.primary)
-                .padding(.horizontal)
-            
-            VStack(spacing: 0) {
-                content
-            }
-            .background(Color(.secondarySystemBackground))
-            .cornerRadius(12)
-            .padding(.horizontal)
-        }
-    }
-}
-
-struct DetailRow: View {
-    let label: String
-    let value: String
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
-            
-            Text(value)
-                .font(.body)
-                .foregroundColor(.primary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        
-        Divider()
-            .padding(.leading)
+    private var formattedRelativeTimestamp: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: displayEvent.timestamp, relativeTo: Date())
     }
 }
 

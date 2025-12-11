@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import SwiftData
+import os.log
 
 @MainActor
 @Observable
@@ -30,7 +31,7 @@ final class EventFeedViewModel {
     private let networkMonitor: NetworkMonitor
     
     private static let pageSize = 20
-    private static let pollingInterval: UInt64 = 60_000_000_000 // 1 minute
+    private static let pollingInterval: UInt64 = 30_000_000_000 // 30 seconds
     
     init(apiService: APIService, appSession: AppSession, modelContext: ModelContext, networkMonitor: NetworkMonitor) {
         self.apiService = apiService
@@ -52,6 +53,7 @@ final class EventFeedViewModel {
                 try? await Task.sleep(nanoseconds: Self.pollingInterval)
                 
                 guard !Task.isCancelled else { break }
+                os_log("checking for new events...")
                 await checkForNewEvents()
             }
         }
@@ -78,6 +80,7 @@ final class EventFeedViewModel {
             // Update state
             newEventsCount = countResponse.totalCount
             newCriticalCount = countResponse.criticalCount
+            os_log("new events count: %d, critical count: %d", newEventsCount, newCriticalCount)
         } catch {
             // Silent - do not show error for polling
         }
@@ -114,6 +117,8 @@ final class EventFeedViewModel {
             events = newEvents
             hasMore = response.hasNext
             nextCursor = response.nextCursor
+            
+            os_log("events updated")
             
             // Update first event timestamp for polling
             if let firstEvent = newEvents.first {
@@ -233,6 +238,8 @@ final class EventFeedViewModel {
                     )
                 }
             }
+            
+            os_log("new events updated")
             
             // Update first event timestamp
             if let firstNewEvent = newEvents.first {
