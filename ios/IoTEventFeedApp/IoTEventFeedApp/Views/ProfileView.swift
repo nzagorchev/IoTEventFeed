@@ -143,6 +143,10 @@ struct DownloadedFileRow: View {
                         .fontWeight(.medium)
                         .foregroundColor(.primary)
                     
+                    Text(download.eventID)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
                     HStack {
                         if let fileSize = download.fileSize {
                             Text(formatFileSize(fileSize))
@@ -150,8 +154,7 @@ struct DownloadedFileRow: View {
                                 .foregroundColor(.secondary)
                         }
                         
-                        Text("•")
-                            .foregroundColor(.secondary)
+                        Spacer()
                         
                         Text("Downloaded \(formatDate(download.downloadedAt))")
                             .font(.caption2)
