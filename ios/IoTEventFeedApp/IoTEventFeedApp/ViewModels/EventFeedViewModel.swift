@@ -105,9 +105,9 @@ final class EventFeedViewModel {
             // Convert API events to SwiftData events
             let newEvents = response.events.map { Event(from: $0) }
             
-            // Save to SwiftData
+            // Save to SwiftData (check for duplicates)
             for event in newEvents {
-                modelContext.insert(event)
+                insertEventIfNotExists(event)
             }
             try? modelContext.save()
             
@@ -142,7 +142,7 @@ final class EventFeedViewModel {
         
         // If offline, try to load from cache
         guard networkMonitor.isConnected else {
-            loadMoreFromCache(afterTimestamp: Date(timeIntervalSince1970: TimeInterval(cursor.timestamp) / 1000.0))
+            loadMoreFromCache(afterTimestamp: Date(timeIntervalSince1970: TimeInterval(cursor.timestamp) / 1000.0), afterID: cursor.eventID)
             return
         }
         
@@ -157,9 +157,9 @@ final class EventFeedViewModel {
             // Convert API events to SwiftData events
             let newEvents = response.events.map { Event(from: $0) }
             
-            // Save to SwiftData
+            // Save to SwiftData (check for duplicates)
             for event in newEvents {
-                modelContext.insert(event)
+                insertEventIfNotExists(event)
             }
             try? modelContext.save()
             
@@ -168,7 +168,7 @@ final class EventFeedViewModel {
             nextCursor = response.nextCursor
         } catch {
             // On error, try to load more from cache
-            loadMoreFromCache(afterTimestamp: Date(timeIntervalSince1970: TimeInterval(cursor.timestamp) / 1000.0))
+            loadMoreFromCache(afterTimestamp: Date(timeIntervalSince1970: TimeInterval(cursor.timestamp) / 1000.0), afterID: cursor.eventID)
         }
         
         isLoadingMore = false
@@ -207,9 +207,9 @@ final class EventFeedViewModel {
                 return
             }
             
-            // Save to SwiftData
+            // Save to SwiftData (check for duplicates)
             for event in newEvents {
-                modelContext.insert(event)
+                insertEventIfNotExists(event)
             }
             try? modelContext.save()
             
@@ -250,9 +250,21 @@ final class EventFeedViewModel {
     }
     
     private func loadFromCache() {
+        // Sort by timestamp descending, then by ID descending to match backend
         var descriptor = FetchDescriptor<Event>(
-            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+            sortBy: [
+                SortDescriptor(\.timestamp, order: .reverse),
+                SortDescriptor(\.id, order: .reverse)
+            ]
         )
+        
+        // Fetch count
+        var hasMoreEvents: Bool = false
+        if let count = try? modelContext.fetchCount(descriptor), count > Self.pageSize {
+            hasMoreEvents = true
+        }
+        
+        // Set page size
         descriptor.fetchLimit = Self.pageSize
         
         if let cachedEvents = try? modelContext.fetch(descriptor) {
@@ -262,21 +274,71 @@ final class EventFeedViewModel {
             if let firstEvent = cachedEvents.first {
                 firstEventTimestamp = Int64(firstEvent.timestamp.timeIntervalSince1970 * 1000)
             }
+            
+            // Set cursor for loading more events
+            if hasMoreEvents, let lastEvent = cachedEvents.last {
+                nextCursor = Cursor(
+                    timestamp: Int64(lastEvent.timestamp.timeIntervalSince1970 * 1000),
+                    eventID: lastEvent.id
+                )
+                hasMore = true
+            } else {
+                setNoMoreEvents()
+            }
         }
     }
     
-    private func loadMoreFromCache(afterTimestamp: Date) {
+    private func loadMoreFromCache(afterTimestamp: Date, afterID: String) {
+        // Sort by timestamp descending, then by ID descending to match backend
+        // Filter events older than afterTimestamp, or same timestamp but ID < afterID
         var descriptor = FetchDescriptor<Event>(
-            predicate: #Predicate<Event> { $0.timestamp < afterTimestamp },
-            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+            predicate: #Predicate<Event> { event in
+                event.timestamp < afterTimestamp ||
+                (event.timestamp == afterTimestamp && event.id < afterID)
+            },
+            sortBy: [
+                SortDescriptor(\.timestamp, order: .reverse),
+                SortDescriptor(\.id, order: .reverse)
+            ]
         )
+        
+        // Fetch count
+        var hasMoreEvents: Bool = false
+        if let count = try? modelContext.fetchCount(descriptor), count > Self.pageSize {
+            hasMoreEvents = true
+        }
+        
+        // Set page size
         descriptor.fetchLimit = Self.pageSize
         
         if let cachedEvents = try? modelContext.fetch(descriptor) {
             events.append(contentsOf: cachedEvents)
-            hasMore = cachedEvents.count == Self.pageSize
-        } else {
-            hasMore = false
+            
+            if hasMoreEvents, let lastEvent = cachedEvents.last {
+                nextCursor = Cursor(
+                    timestamp: Int64(lastEvent.timestamp.timeIntervalSince1970 * 1000),
+                    eventID: lastEvent.id
+                )
+                hasMore = true
+            } else {
+                setNoMoreEvents()
+            }
+        }
+    }
+    
+    private func setNoMoreEvents() {
+        hasMore = false
+        nextCursor = nil
+    }
+    
+    private func insertEventIfNotExists(_ event: Event) {
+        // Check if event with this ID already exists
+        let id = event.id
+        let descriptor = FetchDescriptor<Event>(
+            predicate: #Predicate { $0.id == id })
+        
+        if let existingEvents = try? modelContext.fetch(descriptor), existingEvents.isEmpty {
+            modelContext.insert(event)
         }
     }
 }
