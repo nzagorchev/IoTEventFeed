@@ -353,8 +353,9 @@ final class FileDownloadService {
     
     @MainActor
     func getLocalFileURL(for download: FileDownload) -> URL? {
-        if FileManager.default.fileExists(atPath: getFilePath(for: download.localFilename)) {
-            return URL(fileURLWithPath: download.localFilename)
+        let filePath = getFilePath(for: download.localFilename)
+        if FileManager.default.fileExists(atPath: filePath) {
+            return URL(fileURLWithPath: filePath)
         }
         return nil
     }

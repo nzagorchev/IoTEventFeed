@@ -128,64 +128,82 @@ struct DownloadedFileRow: View {
     let onDelete: () async -> Void
     
     @State private var associatedEvent: Event?
+    @State private var showFileContent = false
+    @State private var fileURLToShow: URL?
     @Environment(\.modelContext) private var modelContext
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "doc.fill")
-                    .foregroundColor(.blue)
-                    .font(.title2)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(download.filename)
-                        .font(.body)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
+        Button(action: {
+            if let service = downloadService,
+               let localURL = service.getLocalFileURL(for: download) {
+                fileURLToShow = localURL
+                showFileContent = true
+            }
+        }) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "doc.fill")
+                        .foregroundColor(.blue)
+                        .font(.title2)
                     
-                    Text(download.eventID)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    
-                    HStack {
-                        if let fileSize = download.fileSize {
-                            Text(formatFileSize(fileSize))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(download.filename)
+                            .font(.body)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                        
+                        Text(download.eventID)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        
+                        HStack {
+                            if let fileSize = download.fileSize {
+                                Text(formatFileSize(fileSize))
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            Text("Downloaded \(formatDate(download.downloadedAt))")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
-                        
-                        Spacer()
-                        
-                        Text("Downloaded \(formatDate(download.downloadedAt))")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                Spacer()
-                
-                HStack(spacing: 16) {
-                    if let service = downloadService,
-                       let localURL = service.getLocalFileURL(for: download) {
-                        ShareLink(item: localURL) {
-                            Image(systemName: "square.and.arrow.up")
-                                .foregroundColor(.blue)
-                        }
                     }
                     
-                    Button(action: {
-                        Task {
-                            await onDelete()
+                    Spacer()
+                    
+                    HStack(spacing: 16) {
+                        if let service = downloadService,
+                           let localURL = service.getLocalFileURL(for: download) {
+                            ShareLink(item: localURL) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .foregroundColor(.blue)
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
-                    }) {
-                        Image(systemName: "trash")
-                            .foregroundColor(.red)
+                        
+                        Button(action: {
+                            Task {
+                                await onDelete()
+                            }
+                        }) {
+                            Image(systemName: "trash")
+                                .foregroundColor(.red)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
+                .padding(.vertical, 8)
             }
-            .padding(.vertical, 8)
+            .padding(.horizontal)
         }
-        .padding(.horizontal)
+        .buttonStyle(PlainButtonStyle())
+        .sheet(isPresented: $showFileContent) { [fileURLToShow] in
+            if let url = fileURLToShow {
+                FileContentView(fileURL: url, filename: download.filename)
+            }
+        }
     }
     
     private func formatFileSize(_ bytes: Int64) -> String {

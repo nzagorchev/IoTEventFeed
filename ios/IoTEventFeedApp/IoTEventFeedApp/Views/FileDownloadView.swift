@@ -25,6 +25,8 @@ struct FileDownloadView: View {
     @State private var downloadProgress: Double?
     @State private var showDeleteConfirmation = false
     @State private var downloadCancelled = false
+    @State private var showFileContent = false
+    @State private var fileURLToShow: URL?
     
     var body: some View {
         VStack(spacing: 12) {
@@ -61,57 +63,73 @@ struct FileDownloadView: View {
     // MARK: - Downloaded File View
     
     private func downloadedFileView(_ download: FileDownload) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "doc.fill")
-                .font(.title2)
-                .foregroundColor(.green)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(download.filename)
-                    .font(.body)
-                    .foregroundColor(.primary)
-                    .lineLimit(2)
+        Button(action: {
+            if let service = downloadService,
+               let localURL = service.getLocalFileURL(for: download) {
+                fileURLToShow = localURL
+                showFileContent = true
+            }
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: "doc.fill")
+                    .font(.title2)
+                    .foregroundColor(.green)
                 
-                HStack(spacing: 8) {
-                    if let fileSize = download.fileSize {
-                        Text(formatFileSize(fileSize))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(download.filename)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                    
+                    HStack(spacing: 8) {
+                        if let fileSize = download.fileSize {
+                            Text(formatFileSize(fileSize))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Text("•")
+                            .foregroundColor(.secondary)
+                        
+                        Text(formatDate(download.downloadedAt))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
-                    Text("•")
-                        .foregroundColor(.secondary)
-                    
-                    Text(formatDate(download.downloadedAt))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            
-            Spacer()
-            
-            HStack(spacing: 16) {
-                if let service = downloadService,
-                   let localURL = service.getLocalFileURL(for: download) {
-                    ShareLink(item: localURL) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.title3)
-                            .foregroundColor(.blue)
-                    }
                 }
                 
-                Button(action: {
-                    showDeleteConfirmation = true
-                }) {
-                    Image(systemName: "trash")
-                        .font(.title3)
-                        .foregroundColor(.red)
+                Spacer()
+                
+                HStack(spacing: 16) {
+                    if let service = downloadService,
+                       let localURL = service.getLocalFileURL(for: download) {
+                        ShareLink(item: localURL) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.title3)
+                                .foregroundColor(.blue)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    
+                    Button(action: {
+                        showDeleteConfirmation = true
+                    }) {
+                        Image(systemName: "trash")
+                            .font(.title3)
+                            .foregroundColor(.red)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
+            .padding(12)
+            .background(Color.green.opacity(0.05))
+            .cornerRadius(8)
         }
-        .padding(12)
-        .background(Color.green.opacity(0.05))
-        .cornerRadius(8)
+        .buttonStyle(PlainButtonStyle())
+        .sheet(isPresented: $showFileContent) { [fileURLToShow] in
+            if let url = fileURLToShow {
+                FileContentView(fileURL: url, filename: download.filename)
+            }
+        }
     }
     
     // MARK: - Downloading View
