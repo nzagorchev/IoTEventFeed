@@ -236,31 +236,6 @@ func NewMockStore() *MockStore {
 	}
 
 	// Add more events to demonstrate pagination
-	locations := []string{"Main Entrance, Building A", "Server Room, Floor 3", "Executive Floor, Building B",
-		"Parking Garage, Level 2", "Research Lab, Building C", "Data Center, Basement",
-		"Warehouse Entrance, Building D", "Conference Room, Floor 5", "IT Office, Floor 2", "Lobby, Building A"}
-	deviceIDs := []string{"DEVICE-001", "DEVICE-002", "DEVICE-003", "DEVICE-004", "DEVICE-005",
-		"DEVICE-006", "DEVICE-007", "DEVICE-008", "DEVICE-009", "DEVICE-010"}
-	deviceNames := []string{"Device - Main Entrance", "Device - Server Room Access", "Device - Executive Floor",
-		"Device - Parking Garage", "Device - Research Lab", "Device - Data Center",
-		"Device - Warehouse Entrance", "Device - Conference Room", "Device - IT Office", "Device - Lobby"}
-	eventTypes := []string{"facial_authentication", "tailgating_detection", "access_denied", "facial_authentication",
-		"facial_authentication", "tailgating_detection", "access_denied", "facial_authentication",
-		"facial_authentication", "tailgating_detection"}
-	severities := []string{"info", "critical", "warning", "info", "info", "critical", "warning", "info", "info", "critical"}
-	messages := []string{
-		"Facial authentication successful",
-		"Tailgating detected",
-		"Access denied - Authentication failure",
-		"Facial authentication successful",
-		"Facial authentication successful",
-		"Tailgating detected",
-		"Access denied",
-		"Facial authentication successful",
-		"Facial authentication successful",
-		"Tailgating detected",
-	}
-
 	for i := 16; i <= 50; i++ {
 		idx := i % 10
 		hoursAgo := i / 2         // Spread events over time
@@ -503,31 +478,6 @@ func (s *MockStore) GenerateNewEvents() []models.Event {
 	availableLogFiles := getAvailableLogFiles("./files")
 
 	// Generate 10 new events, each newer than the previous
-	locations := []string{"Main Entrance, Building A", "Server Room, Floor 3", "Executive Floor, Building B",
-		"Parking Garage, Level 2", "Research Lab, Building C", "Data Center, Basement",
-		"Warehouse Entrance, Building D", "Conference Room, Floor 5", "IT Office, Floor 2", "Lobby, Building A"}
-	deviceIDs := []string{"DEVICE-001", "DEVICE-002", "DEVICE-003", "DEVICE-004", "DEVICE-005",
-		"DEVICE-006", "DEVICE-007", "DEVICE-008", "DEVICE-009", "DEVICE-010"}
-	deviceNames := []string{"Device - Main Entrance", "Device - Server Room Access", "Device - Executive Floor",
-		"Device - Parking Garage", "Device - Research Lab", "Device - Data Center",
-		"Device - Warehouse Entrance", "Device - Conference Room", "Device - IT Office", "Device - Lobby"}
-	eventTypes := []string{"facial_authentication", "tailgating_detection", "access_denied", "facial_authentication",
-		"facial_authentication", "tailgating_detection", "access_denied", "facial_authentication",
-		"facial_authentication", "tailgating_detection"}
-	severities := []string{"info", "critical", "warning", "info", "info", "critical", "warning", "info", "info", "critical"}
-	messages := []string{
-		"Facial authentication successful",
-		"Tailgating detected - Unauthorized access attempt",
-		"Access denied - Authentication failure",
-		"Facial authentication successful",
-		"Facial authentication successful",
-		"Tailgating detected - Multiple individuals",
-		"Access denied - Invalid credentials",
-		"Facial authentication successful",
-		"Facial authentication successful",
-		"Tailgating detected - Security breach",
-	}
-
 	now := time.Now()
 	newEvents := make([]models.Event, 0, 10)
 
@@ -606,4 +556,30 @@ func getLogFileURL(availableFiles []string, index int) *string {
 	filename := availableFiles[fileIndex]
 	url := fmt.Sprintf("/api/files/%s", filename)
 	return &url
+}
+
+// Sample Event Data to use for generation
+var locations = []string{"Main Entrance, Building A", "Server Room, Floor 3", "Executive Floor, Building B",
+	"Parking Garage, Level 2", "Research Lab, Building C", "Data Center, Basement",
+	"Warehouse Entrance, Building D", "Conference Room, Floor 5", "IT Office, Floor 2", "Lobby, Building A"}
+var deviceIDs = []string{"DEVICE-001", "DEVICE-002", "DEVICE-003", "DEVICE-004", "DEVICE-005",
+	"DEVICE-006", "DEVICE-007", "DEVICE-008", "DEVICE-009", "DEVICE-010"}
+var deviceNames = []string{"Device - Main Entrance", "Device - Server Room Access", "Device - Executive Floor",
+	"Device - Parking Garage", "Device - Research Lab", "Device - Data Center",
+	"Device - Warehouse Entrance", "Device - Conference Room", "Device - IT Office", "Device - Lobby"}
+var eventTypes = []string{"facial_authentication", "tailgating_detection", "access_denied", "facial_authentication",
+	"facial_authentication", "tailgating_detection", "access_denied", "facial_authentication",
+	"facial_authentication", "tailgating_detection"}
+var severities = []string{"info", "critical", "warning", "info", "info", "critical", "warning", "info", "info", "critical"}
+var messages = []string{
+	"Facial authentication successful",
+	"Tailgating detected - Unauthorized access attempt",
+	"Access denied - Authentication failure",
+	"Facial authentication successful",
+	"Facial authentication successful",
+	"Tailgating detected - Multiple individuals",
+	"Access denied - Invalid credentials",
+	"Facial authentication successful",
+	"Facial authentication successful",
+	"Tailgating detected - Security breach",
 }
