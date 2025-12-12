@@ -86,6 +86,10 @@ go build -o backend main.go
 
 ## API Endpoints
 
+### Base URL
+
+All API endpoints are prefixed with `/api`. The server runs on port `8080` by default.
+
 ### Authentication
 
 #### Login
@@ -174,6 +178,35 @@ GET /api/events/:id
 Authorization: Bearer <token>
 ```
 
+#### Generate New Events (Testing)
+```http
+POST /api/events/generate
+Authorization: Bearer <token>
+```
+
+**Description:** Generates 10 new events for testing purposes. These events will be newer than the newest event currently in the store, making them ideal for testing polling, refresh functionality, and new events detection.
+
+**Response:**
+```json
+{
+  "events": [...],
+  "has_next": false
+}
+```
+
+**Details:**
+- Creates exactly 10 new events
+- Events are timestamped sequentially (1 second apart) starting from after the newest existing event
+- Events include various severities (info, warning, error, critical)
+- Some events may include `download_url` fields if log files are available in the `files/` directory
+- Useful for testing:
+  - New events polling functionality
+  - Pull-to-refresh behavior
+  - New events banner display
+  - Event feed updates
+
+**Note:** This is a testing/development endpoint. In production, events would typically be created by IoT devices or other systems.
+
 ### User Profile
 
 #### Get User Profile
@@ -190,7 +223,34 @@ GET /api/files/:filename
 Authorization: Bearer <token>
 ```
 
-Files are streamed with appropriate headers for download.
+Files are streamed with appropriate headers for download. The endpoint:
+- Validates filename to prevent directory traversal attacks
+- Returns 404 if file doesn't exist
+- Streams large files efficiently
+- Sets proper Content-Type and Content-Disposition headers
+
+**Response:** Binary file stream with appropriate headers
+
+### New Events Polling
+
+#### Get New Events Count
+```http
+GET /api/events/new/count?after_ts=1705312200000
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+- `after_ts` (required): Unix timestamp in milliseconds - count events newer than this
+
+**Response:**
+```json
+{
+  "total_count": 5,
+  "critical_count": 2
+}
+```
+
+This endpoint is designed for efficient polling - it returns only counts without fetching full event data, making it ideal for background polling in mobile apps.
 
 ## Pagination
 
@@ -217,6 +277,10 @@ curl -H "Authorization: Bearer <token>" \
 # 3. Refresh - get 20 newer events
 curl -H "Authorization: Bearer <token>" \
   "http://localhost:8080/api/events?before_ts=<ts>>&before_id=<event_uuid>"
+
+# 4. Generate new events for testing
+curl -X POST -H "Authorization: Bearer <token>" \
+  "http://localhost:8080/api/events/generate"
 ```
 
 ## Generating Sample Log Files
