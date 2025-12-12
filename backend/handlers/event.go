@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"fmt"
 	"ioteventfeed/backend/models"
 	"ioteventfeed/backend/store"
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -128,7 +131,29 @@ func (h *EventHandler) GetEvents(c *gin.Context) {
 		limit = &defaultLimit
 	}
 
+	// Build log message with parameters
+	var params []string
+	if limit != nil {
+		params = append(params, fmt.Sprintf("limit=%d", *limit))
+	}
+	if beforeTS != nil {
+		params = append(params, fmt.Sprintf("before_ts=%d", beforeTS.UnixMilli()))
+		if beforeID != nil {
+			params = append(params, fmt.Sprintf("before_id=%s", *beforeID))
+		}
+	}
+	if afterTS != nil {
+		params = append(params, fmt.Sprintf("after_ts=%d", afterTS.UnixMilli()))
+		if afterID != nil {
+			params = append(params, fmt.Sprintf("after_id=%s", *afterID))
+		}
+	}
+
+	log.Printf("Fetching events with params: [%s]", strings.Join(params, ", "))
+
 	events, hasNext := h.store.GetEvents(limit, beforeTS, beforeID, afterTS, afterID)
+
+	log.Printf("Events count: %d, hasNext: %t", len(events), hasNext)
 
 	response := models.EventListResponse{
 		Events:  events,
@@ -152,6 +177,7 @@ func (h *EventHandler) GetEventByID(c *gin.Context) {
 
 	// Validate UUID format
 	if eventID == "" {
+		log.Printf("GetEventByID failed: empty event ID")
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "Invalid event ID",
 			Message: "Event ID is required",
@@ -162,6 +188,7 @@ func (h *EventHandler) GetEventByID(c *gin.Context) {
 
 	event, exists := h.store.GetEventByID(eventID)
 	if !exists {
+		log.Printf("GetEventByID failed: event not found - event_id: %s", eventID)
 		c.JSON(http.StatusNotFound, models.ErrorResponse{
 			Error:   "Event not found",
 			Message: "The requested event does not exist",
@@ -170,6 +197,7 @@ func (h *EventHandler) GetEventByID(c *gin.Context) {
 		return
 	}
 
+	log.Printf("GetEventByID successful - event_id: %s", eventID)
 	c.JSON(http.StatusOK, event)
 }
 
@@ -202,6 +230,12 @@ func (h *EventHandler) GetNewEventsCount(c *gin.Context) {
 	afterTS := time.UnixMilli(timestampMs)
 	totalCount, criticalCount := h.store.GetNewEventsCount(afterTS)
 
+	if totalCount == 0 {
+		log.Printf("Checking for new events - after_ts: %d, result: no new events", timestampMs)
+	} else {
+		log.Printf("Checking for new events - after_ts: %d, total_count: %d, critical_count: %d", timestampMs, totalCount, criticalCount)
+	}
+
 	response := models.NewEventsCountResponse{
 		TotalCount:    totalCount,
 		CriticalCount: criticalCount,
@@ -214,11 +248,11 @@ func (h *EventHandler) GetNewEventsCount(c *gin.Context) {
 // These events will be newer than the newest event currently in the store
 func (h *EventHandler) GenerateNewEvents(c *gin.Context) {
 	newEvents := h.store.GenerateNewEvents()
-	
+
 	response := models.EventListResponse{
 		Events:  newEvents,
 		HasNext: false,
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }

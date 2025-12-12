@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"ioteventfeed/backend/models"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -24,8 +25,11 @@ func NewFileHandler(filesDir string) *FileHandler {
 func (h *FileHandler) DownloadFile(c *gin.Context) {
 	filename := c.Param("filename")
 
+	log.Printf("File download request - filename: %s, user: %s", filename)
+
 	// Security: prevent directory traversal
 	if filepath.Base(filename) != filename {
+		log.Printf("File download failed: invalid filename - filename: %s", filename)
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "Invalid filename",
 			Message: "Filename contains invalid characters",
@@ -39,6 +43,7 @@ func (h *FileHandler) DownloadFile(c *gin.Context) {
 	// Check if file exists
 	fileInfo, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
+		log.Printf("File download failed: file not found - filename: %s", filename)
 		c.JSON(http.StatusNotFound, models.ErrorResponse{
 			Error:   "File not found",
 			Message: "The requested file does not exist",
@@ -48,6 +53,7 @@ func (h *FileHandler) DownloadFile(c *gin.Context) {
 	}
 
 	if err != nil {
+		log.Printf("File download failed: stat error - filename: %s, error: %v", filename, err)
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "Internal server error",
 			Message: "Failed to access file",
@@ -59,6 +65,7 @@ func (h *FileHandler) DownloadFile(c *gin.Context) {
 	// Open file
 	file, err := os.Open(filePath)
 	if err != nil {
+		log.Printf("File download failed: open error - filename: %s, user: %s, error: %v", filename, err)
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "Internal server error",
 			Message: "Failed to open file",
@@ -67,6 +74,8 @@ func (h *FileHandler) DownloadFile(c *gin.Context) {
 		return
 	}
 	defer file.Close()
+
+	log.Printf("File download started - filename: %s, size: %d bytes", filename, fileInfo.Size())
 
 	// Set headers for file download
 	c.Header("Content-Description", "File Transfer")
@@ -77,4 +86,6 @@ func (h *FileHandler) DownloadFile(c *gin.Context) {
 
 	// Stream file to response
 	c.DataFromReader(http.StatusOK, fileInfo.Size(), "application/octet-stream", file, nil)
+
+	log.Printf("File download completed - filename: %s", filename)
 }
