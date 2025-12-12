@@ -1,0 +1,258 @@
+package handlers
+
+import (
+	"fmt"
+	"ioteventfeed/backend/models"
+	"ioteventfeed/backend/store"
+	"log"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
+)
+
+type EventHandler struct {
+	store *store.MockStore
+}
+
+func NewEventHandler(s *store.MockStore) *EventHandler {
+	return &EventHandler{store: s}
+}
+
+// GetEvents retrieves a paginated list of events
+// Query parameters:
+//   - limit: Maximum number of events (for latest events, no cursor) - default: 20, max: 100
+//   - before_ts: Timestamp to get newer events (for refresh) - Unix milliseconds
+//   - before_id: Event ID for precise filtering with before_ts (optional)
+//   - after_ts: Timestamp to get older events (for backward pagination) - Unix milliseconds
+//   - after_id: Event ID for precise filtering with after_ts (optional)
+//
+// Events are always sorted by timestamp in descending order (newest first)
+// When using before_ts or after_ts, page size is fixed at 20 events
+func (h *EventHandler) GetEvents(c *gin.Context) {
+	var limit *int
+	var beforeTS *time.Time
+	var beforeID *string
+	var afterTS *time.Time
+	var afterID *string
+
+	// Parse limit parameter (for latest events)
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			if l > 100 {
+				l = 100 // Max limit
+			}
+			limit = &l
+		} else {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Error:   "Invalid limit format",
+				Message: "The 'limit' parameter must be a positive integer (max: 100)",
+				Code:    http.StatusBadRequest,
+			})
+			return
+		}
+	}
+
+	// Parse before_ts parameter (for refresh - get newer events)
+	if beforeTSStr := c.Query("before_ts"); beforeTSStr != "" {
+		if timestampMs, err := strconv.ParseInt(beforeTSStr, 10, 64); err == nil {
+			parsedTime := time.UnixMilli(timestampMs)
+			beforeTS = &parsedTime
+
+			// Parse optional before_id parameter
+			if beforeIDStr := c.Query("before_id"); beforeIDStr != "" {
+				beforeID = &beforeIDStr
+			}
+		} else {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Error:   "Invalid timestamp format",
+				Message: "The 'before_ts' parameter must be Unix milliseconds (e.g., 1705312200000)",
+				Code:    http.StatusBadRequest,
+			})
+			return
+		}
+	} else {
+		// If before_id is provided without before_ts, return error
+		if beforeIDStr := c.Query("before_id"); beforeIDStr != "" {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Error:   "Invalid parameter combination",
+				Message: "The 'before_id' parameter requires the 'before_ts' parameter to be provided",
+				Code:    http.StatusBadRequest,
+			})
+			return
+		}
+	}
+
+	// Parse after_ts parameter (for backward pagination - get older events)
+	if afterTSStr := c.Query("after_ts"); afterTSStr != "" {
+		if timestampMs, err := strconv.ParseInt(afterTSStr, 10, 64); err == nil {
+			parsedTime := time.UnixMilli(timestampMs)
+			afterTS = &parsedTime
+
+			// Parse optional after_id parameter
+			if afterIDStr := c.Query("after_id"); afterIDStr != "" {
+				afterID = &afterIDStr
+			}
+		} else {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Error:   "Invalid timestamp format",
+				Message: "The 'after_ts' parameter must be Unix milliseconds (e.g., 1705312200000)",
+				Code:    http.StatusBadRequest,
+			})
+			return
+		}
+	} else {
+		// If after_id is provided without after_ts, return error
+		if afterIDStr := c.Query("after_id"); afterIDStr != "" {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Error:   "Invalid parameter combination",
+				Message: "The 'after_id' parameter requires the 'after_ts' parameter to be provided",
+				Code:    http.StatusBadRequest,
+			})
+			return
+		}
+	}
+
+	// Validate parameter combinations
+	if beforeTS != nil && afterTS != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "Invalid parameter combination",
+			Message: "Cannot use both 'before_ts' and 'after_ts' parameters together",
+			Code:    http.StatusBadRequest,
+		})
+		return
+	}
+
+	// Set default limit if no cursor parameters provided
+	if limit == nil && beforeTS == nil && afterTS == nil {
+		defaultLimit := 20
+		limit = &defaultLimit
+	}
+
+	// Build log message with parameters
+	var params []string
+	if limit != nil {
+		params = append(params, fmt.Sprintf("limit=%d", *limit))
+	}
+	if beforeTS != nil {
+		params = append(params, fmt.Sprintf("before_ts=%d", beforeTS.UnixMilli()))
+		if beforeID != nil {
+			params = append(params, fmt.Sprintf("before_id=%s", *beforeID))
+		}
+	}
+	if afterTS != nil {
+		params = append(params, fmt.Sprintf("after_ts=%d", afterTS.UnixMilli()))
+		if afterID != nil {
+			params = append(params, fmt.Sprintf("after_id=%s", *afterID))
+		}
+	}
+
+	log.Printf("Fetching events with params: [%s]", strings.Join(params, ", "))
+
+	events, hasNext := h.store.GetEvents(limit, beforeTS, beforeID, afterTS, afterID)
+
+	log.Printf("Events count: %d, hasNext: %t", len(events), hasNext)
+
+	response := models.EventListResponse{
+		Events:  events,
+		HasNext: hasNext,
+	}
+
+	// Generate next cursor if there are more events
+	if hasNext && len(events) > 0 {
+		lastEvent := events[len(events)-1]
+		response.NextCursor = &models.Cursor{
+			Timestamp: lastEvent.Timestamp.UnixMilli(),
+			EventID:   lastEvent.ID,
+		}
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (h *EventHandler) GetEventByID(c *gin.Context) {
+	eventID := c.Param("id")
+
+	// Validate UUID format
+	if eventID == "" {
+		log.Printf("GetEventByID failed: empty event ID")
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "Invalid event ID",
+			Message: "Event ID is required",
+			Code:    http.StatusBadRequest,
+		})
+		return
+	}
+
+	event, exists := h.store.GetEventByID(eventID)
+	if !exists {
+		log.Printf("GetEventByID failed: event not found - event_id: %s", eventID)
+		c.JSON(http.StatusNotFound, models.ErrorResponse{
+			Error:   "Event not found",
+			Message: "The requested event does not exist",
+			Code:    http.StatusNotFound,
+		})
+		return
+	}
+
+	log.Printf("GetEventByID successful - event_id: %s", eventID)
+	c.JSON(http.StatusOK, event)
+}
+
+// GetNewEventsCount retrieves the count of new events newer than the given timestamp
+// Query parameters:
+//   - after_ts: Timestamp to count events newer than this - Unix milliseconds (required)
+//
+// Returns total count and count of critical events
+func (h *EventHandler) GetNewEventsCount(c *gin.Context) {
+	afterTSStr := c.Query("after_ts")
+	if afterTSStr == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "Missing parameter",
+			Message: "The 'after_ts' parameter is required",
+			Code:    http.StatusBadRequest,
+		})
+		return
+	}
+
+	timestampMs, err := strconv.ParseInt(afterTSStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "Invalid timestamp format",
+			Message: "The 'after_ts' parameter must be Unix milliseconds (e.g., 1705312200000)",
+			Code:    http.StatusBadRequest,
+		})
+		return
+	}
+
+	afterTS := time.UnixMilli(timestampMs)
+	totalCount, criticalCount := h.store.GetNewEventsCount(afterTS)
+
+	if totalCount == 0 {
+		log.Printf("Checking for new events - after_ts: %d, result: no new events", timestampMs)
+	} else {
+		log.Printf("Checking for new events - after_ts: %d, total_count: %d, critical_count: %d", timestampMs, totalCount, criticalCount)
+	}
+
+	response := models.NewEventsCountResponse{
+		TotalCount:    totalCount,
+		CriticalCount: criticalCount,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// GenerateNewEvents creates 10 new events for testing purposes
+// These events will be newer than the newest event currently in the store
+func (h *EventHandler) GenerateNewEvents(c *gin.Context) {
+	newEvents := h.store.GenerateNewEvents()
+
+	response := models.EventListResponse{
+		Events:  newEvents,
+		HasNext: false,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
